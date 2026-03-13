@@ -1,0 +1,107 @@
+ELTE Informatics Chatbot Using a Small Language Model
+
+This thesis aims to develop a chatbot specifically designed for the ELTE Faculty of Informatics. The chatbot will act as an AI assistant that answers common administrative and academic questions, such as BSc curriculum details, prerequisite and follow-up courses, exam rules, registration, and other faculty-related information.  The project will use a small open-source language model that is efficient and suitable for local deployment without high computational cost.
+The work includes three main parts:
+Collecting and preparing information from ELTE Informatics 	websites and documents.
+Fine-tuning a small language model to give accurate, 	context-aware answers.
+Building a simple web interface for users to interact with 	the chatbot.
+The goal is to create a practical, privacy-safe, and low-cost chatbot that improves communication and helps students and staff quickly find relevant information.
+
+
+Your project is an ELTE Informatics chatbot that answers faculty-specific academic and administrative questions, using a small local language model rather than a large cloud model. The main goal is to make something practical, low-cost, privacy-safer, and actually useful for ELTE students/staff for things like curriculum info, prerequisites, exam rules, registration, and faculty documents. 
+
+topic
+
+Short implementation summary
+
+You’d build it in 4 layers:
+
+Data collection layer
+Gather information from ELTE Informatics sources:
+
+faculty webpages
+
+curriculum / subject descriptions
+
+study rules
+
+exam and registration info
+
+PDFs and official documents
+
+Knowledge processing layer
+Clean and structure that data, split it into chunks, generate embeddings, and store it in a vector database so the chatbot can retrieve the relevant passages when a user asks something.
+
+LLM + RAG backend
+Instead of training a huge model from scratch, use a small local LLM and combine it with RAG (Retrieval-Augmented Generation):
+
+user asks question
+
+system retrieves relevant ELTE documents
+
+model answers using that retrieved context
+
+This is the most realistic approach for your thesis because it is cheaper, lighter, and easier to justify than full fine-tuning.
+
+Frontend / chat interface
+A simple web app where users type questions and receive answers, ideally with sources or referenced document sections.
+
+Technologies we talked about using
+
+Most likely stack:
+
+Python for the main backend
+
+FastAPI for the API server
+
+Ollama or llama.cpp to run a small local open-source model
+
+A small model such as a lightweight Llama-family / Mistral-family instruct model
+
+RAG pipeline instead of heavy fine-tuning
+
+ChromaDB or SQLite-based storage for document retrieval / metadata
+
+embeddings model for semantic search
+
+simple HTML/CSS/JS frontend or lightweight framework frontend
+
+PDF/text scraping and preprocessing tools for ELTE documents
+
+Practical architecture
+
+A clean implementation would look like this:
+
+Frontend
+chat page for asking questions
+
+FastAPI backend
+handles requests from frontend
+
+Retriever
+searches ELTE document chunks
+
+Local LLM
+generates final answer from retrieved context
+
+Document store / vector DB
+stores embeddings + document metadata
+
+Best thesis direction
+
+The strongest version of the project is probably:
+
+“Local ELTE Informatics Chatbot using a small LLM + RAG over official faculty documents.”
+
+That is stronger than “just fine-tuning a model,” because:
+
+it is more feasible on your hardware
+
+easier to demonstrate experimentally
+
+easier to evaluate
+
+better for privacy
+
+more realistic as an actual faculty assistant
+
