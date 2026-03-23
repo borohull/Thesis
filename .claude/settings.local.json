@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(pandoc --track-changes=all \"Requirement analysis.docx\" -o /tmp/req_analysis.md)",
-      "Read(//tmp/**)",
-      "Bash(python -c \":*)"
-    ]
-  }
-}
