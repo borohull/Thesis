@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# ChromaDB — large binary files, regenerate by re-running notebook 02
+data/processed/chroma_db/
+
+# Word temp files
+~$*.docx
+~$*.xlsx
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/

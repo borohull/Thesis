@@ -1,0 +1,12 @@
+from pathlib import Path
+
+BASE_DIR        = Path(__file__).parent.parent        
+CHROMA_PATH     = str(BASE_DIR / "data/processed/chroma_db")
+COLLECTION_NAME = "elte_ik"
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+TOP_K           = 3
+
+OLLAMA_URL      = "http://localhost:11434/api/generate"
+OLLAMA_MODEL    = "llama3.2:3b"
+TEMPERATURE     = 0.1
+TIMEOUT_S       = 120
