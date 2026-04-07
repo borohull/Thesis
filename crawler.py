@@ -27,6 +27,7 @@ ROOT_DIR = Path(__file__).parent
 RAW_DIR  = ROOT_DIR / "data" / "raw"
 PROC_DIR = ROOT_DIR / "data" / "processed"
 PDF_DIR  = RAW_DIR / "linked_pdfs"
+DOCX_DIR = RAW_DIR / "linked_docx"
 
 # ── Crawl configuration ───────────────────────────────────────────────────────
 DELAY          = 0.5   # seconds between requests
@@ -38,7 +39,7 @@ HEADERS = {
 }
 
 # ── Seeds ─────────────────────────────────────────────────────────────────────
-INF_SEEDS = ["https://inf.elte.hu/"]
+INF_SEEDS = ["https://inf.elte.hu/en"]
 INF_HOSTS = {"inf.elte.hu", "www.inf.elte.hu"}
 
 ELTE_SEEDS = [
@@ -92,7 +93,7 @@ def is_allowed(url: str) -> bool:
         return False
     host = p.netloc.lower().removeprefix("www.")
     if host == "inf.elte.hu":
-        return True
+        return p.path == "/en" or p.path.startswith("/en/")
     if host == "elte.hu":
         path = p.path
         return any(
@@ -102,30 +103,27 @@ def is_allowed(url: str) -> bool:
     return False
 
 
-def url_to_filename(url: str) -> str:
+def url_to_filename(url: str) -> Path:
     """
-    Map a URL to a flat .html filename under RAW_DIR.
+    Map a URL to a relative Path mirroring the site structure under RAW_DIR.
 
-    inf.elte.hu/en/students        →  en_students.html
-    inf.elte.hu/                   →  index.html
-    www.elte.hu/en/quaestura-office→  elte_en_quaestura-office.html
+    inf.elte.hu/en/students        ->  inf.elte.hu/en/students.html
+    inf.elte.hu/                   ->  inf.elte.hu/index.html
+    www.elte.hu/en/quaestura-office->  elte.hu/en/quaestura-office.html
     """
     p = urlparse(url)
     host_bare = p.netloc.lower().removeprefix("www.")
     path = p.path.strip("/")
 
     if not path:
-        path = "index"
+        return Path(host_bare) / "index.html"
 
-    # Replace path separators and non-safe chars with underscores
-    safe = re.sub(r"[^\w\-]", "_", path.replace("/", "_"))
-    # Collapse multiple underscores
-    safe = re.sub(r"_+", "_", safe).strip("_")
-
-    if host_bare == "inf.elte.hu":
-        return f"{safe}.html"
-    else:
-        return f"elte_{safe}.html"
+    # Last segment becomes filename, rest become directories
+    segments = path.split("/")
+    filename = segments[-1] + ".html"
+    if len(segments) > 1:
+        return Path(host_bare, *segments[:-1], filename)
+    return Path(host_bare) / filename
 
 
 def pdf_url_to_filename(url: str) -> str:
@@ -134,6 +132,46 @@ def pdf_url_to_filename(url: str) -> str:
     if not name.lower().endswith(".pdf"):
         name += ".pdf"
     return name
+
+
+def docx_url_to_filename(url: str) -> str:
+    """Extract and URL-decode the DOCX filename from a URL."""
+    name = unquote(Path(urlparse(url).path).name)
+    if not name.lower().endswith(".docx"):
+        name += ".docx"
+    return name
+
+
+# ── Language detection ────────────────────────────────────────────────────────
+
+def is_english(html: str, url: str) -> bool:
+    """
+    Return True if the page is English.
+
+    A page is English if ANY of these is true:
+      - The URL path contains /en/ or starts with /en
+      - The <html> tag has lang starting with "en"
+      - There is a <meta http-equiv="content-language" content="en"> tag
+    """
+    p = urlparse(url)
+    if p.path == "/en" or p.path.startswith("/en/"):
+        return True
+
+    soup = BeautifulSoup(html, "html.parser")
+
+    html_tag = soup.find("html")
+    if html_tag:
+        lang = (html_tag.get("lang") or "").lower()
+        if lang.startswith("en"):
+            return True
+
+    meta = soup.find("meta", attrs={"http-equiv": re.compile(r"content-language", re.I)})
+    if meta:
+        content = (meta.get("content") or "").lower()
+        if content.startswith("en"):
+            return True
+
+    return False
 
 
 # ── Fetch helpers ─────────────────────────────────────────────────────────────
@@ -157,10 +195,17 @@ def fetch_html(client: httpx.Client, url: str, dest: Path) -> tuple[str | None, 
         print(f"  [SKIP-TYPE] {url}  ({ctype.split(';')[0].strip()})")
         return None, None
 
+    html_text = resp.text
+
+    if not is_english(html_text, url):
+        print(f"  [SKIP-LANG] {url}")
+        return None, None
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(resp.content)
     final_url = str(resp.url)
-    print(f"  [SAVE] {url}  →  {dest.name}")
-    return resp.text, final_url
+    print(f"  [SAVE] {url}  ->  {dest.name}")
+    return html_text, final_url
 
 
 def fetch_pdf(client: httpx.Client, url: str) -> None:
@@ -173,9 +218,24 @@ def fetch_pdf(client: httpx.Client, url: str) -> None:
         resp = client.get(url, follow_redirects=True)
         resp.raise_for_status()
         dest.write_bytes(resp.content)
-        print(f"  [PDF-SAVE] {url}  →  {dest.name}")
+        print(f"  [PDF-SAVE] {url}  ->  {dest.name}")
     except Exception as e:
         print(f"  [PDF-FAIL] {url}  ({e})")
+
+
+def fetch_docx(client: httpx.Client, url: str) -> None:
+    """Download a DOCX to DOCX_DIR, skip if already exists."""
+    dest = DOCX_DIR / docx_url_to_filename(url)
+    if dest.exists():
+        print(f"  [DOCX-SKIP] {dest.name}")
+        return
+    try:
+        resp = client.get(url, follow_redirects=True)
+        resp.raise_for_status()
+        dest.write_bytes(resp.content)
+        print(f"  [DOCX-SAVE] {url}  ->  {dest.name}")
+    except Exception as e:
+        print(f"  [DOCX-FAIL] {url}  ({e})")
 
 
 # ── Link extraction ───────────────────────────────────────────────────────────
@@ -199,11 +259,12 @@ def crawl(client: httpx.Client) -> None:
     """BFS crawl of all seeds. Single loop handles both inf.elte.hu and elte.hu."""
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     PDF_DIR.mkdir(parents=True, exist_ok=True)
+    DOCX_DIR.mkdir(parents=True, exist_ok=True)
 
     visited: set[str] = set()
     queue: deque[str] = deque(INF_SEEDS + ELTE_SEEDS)
 
-    saved = skipped = failed = pdfs = 0
+    saved = skipped = failed = pdfs = docxs = 0
 
     while queue:
         url = queue.popleft()
@@ -215,13 +276,17 @@ def crawl(client: httpx.Client) -> None:
         dest = RAW_DIR / url_to_filename(url)
 
         if dest.exists():
-            print(f"  [SKIP] {url}")
-            skipped += 1
             # Parse the existing file to find links we may not have enqueued yet
             try:
                 html = dest.read_text(encoding="utf-8", errors="replace")
             except Exception:
                 continue
+            if not is_english(html, url):
+                print(f"  [SKIP-LANG] {url}")
+                dest.unlink()
+                continue
+            print(f"  [SKIP] {url}")
+            skipped += 1
         else:
             time.sleep(DELAY)
             html, final_url = fetch_html(client, url, dest)
@@ -245,12 +310,16 @@ def crawl(client: httpx.Client) -> None:
                 time.sleep(DELAY)
                 fetch_pdf(client, link)
                 pdfs += 1
+            elif link.lower().endswith(".docx") and is_allowed(link):
+                time.sleep(DELAY)
+                fetch_docx(client, link)
+                docxs += 1
             elif is_allowed(link):
                 queue.append(link)
 
     print(
-        f"\nCrawl complete — saved: {saved}, skipped: {skipped}, "
-        f"failed: {failed}, PDFs: {pdfs}"
+        f"\nCrawl complete -- saved: {saved}, skipped: {skipped}, "
+        f"failed: {failed}, PDFs: {pdfs}, DOCXs: {docxs}"
     )
 
 
@@ -265,6 +334,7 @@ def reset_data() -> None:
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     PROC_DIR.mkdir(parents=True, exist_ok=True)
     PDF_DIR.mkdir(parents=True, exist_ok=True)
+    DOCX_DIR.mkdir(parents=True, exist_ok=True)
     print("[RESET] Directories recreated.")
 
 

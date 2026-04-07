@@ -26,3 +26,7 @@ data/processed/chroma_db/
 
 # Claude Code
 .claude/
+
+# Data
+data/raw/
+data/processed/
