@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ELTE IK Assistant</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Design tokens (from ELTE website) ── */
+    :root {
+      --navy:   #012850;
+      --teal:   #009FA3;
+      --gold:   #F8CD69;
+      --gray:   #C8C9C7;
+      --light:  #DAE6F4;
+      --white:  #ffffff;
+      --bg:     #f4f6f9;
+      --radius: 8px;
+      --shadow: 0 2px 12px rgba(1,40,80,0.10);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: var(--bg);
+      color: var(--navy);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--navy);
+      padding: 0 32px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      flex-shrink: 0;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-logo {
+      width: 36px;
+      height: 36px;
+      background: var(--teal);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-logo svg { width: 22px; height: 22px; fill: white; }
+
+    .header-title {
+      color: var(--white);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
+
+    .header-subtitle {
+      color: var(--light);
+      font-size: 12px;
+      font-weight: 300;
+      margin-top: 1px;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: var(--light);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--gray);
+      transition: background 0.3s;
+    }
+    .status-dot.online  { background: #4caf50; }
+    .status-dot.offline { background: #f44336; }
+
+    /* ── Chat area ── */
+    main {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 16px;
+    }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 0 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      scroll-behavior: smooth;
+    }
+
+    /* scrollbar */
+    #messages::-webkit-scrollbar { width: 5px; }
+    #messages::-webkit-scrollbar-thumb { background: var(--gray); border-radius: 4px; }
+
+    /* ── Welcome message ── */
+    .welcome {
+      text-align: center;
+      padding: 40px 20px 20px;
+      color: #5a6a80;
+    }
+
+    .welcome-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--teal);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 16px;
+    }
+
+    .welcome-icon svg { width: 28px; height: 28px; fill: white; }
+
+    .welcome h2 { font-size: 20px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+    .welcome p  { font-size: 14px; line-height: 1.6; max-width: 420px; margin: 0 auto; }
+
+    .suggestion-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .chip {
+      background: var(--white);
+      border: 1.5px solid var(--teal);
+      color: var(--teal);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      font-family: inherit;
+    }
+    .chip:hover { background: var(--teal); color: var(--white); }
+
+    /* ── Message bubbles ── */
+    .msg {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      max-width: 78%;
+    }
+
+    .msg.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .msg.bot  .avatar { background: var(--navy);  color: var(--white); font-size: 11px; }
+    .msg.user .avatar { background: var(--teal);  color: var(--white); }
+
+    .bubble {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      font-size: 14.5px;
+      line-height: 1.65;
+      box-shadow: var(--shadow);
+    }
+
+    .msg.user .bubble {
+      background: var(--teal);
+      color: var(--white);
+      border-bottom-right-radius: 2px;
+    }
+
+    .msg.bot .bubble {
+      background: var(--white);
+      color: var(--navy);
+      border-bottom-left-radius: 2px;
+    }
+
+    .msg.error .bubble {
+      background: #fff3f3;
+      color: #c0392b;
+      border-left: 3px solid #f44336;
+    }
+
+    /* ── Sources ── */
+    .sources {
+      margin-top: 10px;
+    }
+
+    .sources-toggle {
+      background: none;
+      border: none;
+      color: var(--teal);
+      font-size: 12px;
+      font-family: inherit;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .sources-toggle svg {
+      width: 12px; height: 12px;
+      transition: transform 0.2s;
+    }
+    .sources-toggle.open svg { transform: rotate(90deg); }
+
+    .sources-list {
+      display: none;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .sources-list.visible { display: flex; }
+
+    .source-tag {
+      background: #fff8e1;
+      border: 1px solid var(--gold);
+      color: #7a5e00;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 11.5px;
+    }
+
+    /* ── Typing indicator ── */
+    .typing .bubble {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 14px 18px;
+    }
+
+    .dot {
+      width: 7px; height: 7px;
+      background: var(--teal);
+      border-radius: 50%;
+      animation: bounce 1.2s infinite;
+    }
+    .dot:nth-child(2) { animation-delay: 0.2s; }
+    .dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      0%, 60%, 100% { transform: translateY(0); }
+      30%            { transform: translateY(-6px); }
+    }
+
+    /* ── Input bar ── */
+    .input-bar {
+      padding: 14px 0 20px;
+      flex-shrink: 0;
+    }
+
+    .input-wrap {
+      display: flex;
+      gap: 10px;
+      background: var(--white);
+      border: 1.5px solid var(--gray);
+      border-radius: 12px;
+      padding: 8px 8px 8px 16px;
+      box-shadow: var(--shadow);
+      transition: border-color 0.2s;
+    }
+    .input-wrap:focus-within { border-color: var(--teal); }
+
+    #user-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: inherit;
+      font-size: 14.5px;
+      color: var(--navy);
+      background: transparent;
+      resize: none;
+      max-height: 120px;
+      line-height: 1.5;
+    }
+
+    #user-input::placeholder { color: var(--gray); }
+
+    #send-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: var(--teal);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.2s, transform 0.1s;
+      align-self: flex-end;
+    }
+    #send-btn:hover:not(:disabled) { background: #007d80; }
+    #send-btn:active:not(:disabled) { transform: scale(0.93); }
+    #send-btn:disabled { background: var(--gray); cursor: not-allowed; }
+    #send-btn svg { width: 18px; height: 18px; fill: white; }
+
+    .input-hint {
+      font-size: 11px;
+      color: #8a9baf;
+      margin-top: 6px;
+      padding: 0 4px;
+    }
+
+    /* ── New chat button ── */
+    .new-chat-btn {
+      position: fixed;
+      top: 14px;
+      right: 80px;
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.35);
+      color: var(--light);
+      font-family: inherit;
+      font-size: 12px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .new-chat-btn:hover {
+      background: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.6);
+    }
+    .new-chat-btn svg { width: 13px; height: 13px; fill: var(--light); }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="header-brand">
+    <div class="header-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6L23 9 12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+    </div>
+    <div>
+      <div class="header-title">ELTE IK Assistant</div>
+      <div class="header-subtitle">Faculty of Informatics · AI Chatbot</div>
+    </div>
+  </div>
+
+  <button class="new-chat-btn" onclick="newChat()">
+    <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+    New chat
+  </button>
+
+  <div class="header-status">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Checking…</span>
+  </div>
+</header>
+
+<!-- ── Chat ── -->
+<main>
+  <div id="messages">
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+      </div>
+      <h2>How can I help you?</h2>
+      <p>Ask me anything about the ELTE Faculty of Informatics — curriculum, prerequisites, exam rules, registration, or admissions.</p>
+      <div class="suggestion-chips">
+        <button class="chip" onclick="sendSuggestion(this)">What is a strong prerequisite?</button>
+        <button class="chip" onclick="sendSuggestion(this)">How does Neptun handle registration?</button>
+        <button class="chip" onclick="sendSuggestion(this)">What BSc programs are available?</button>
+        <button class="chip" onclick="sendSuggestion(this)">What is a weak prerequisite?</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-bar">
+    <div class="input-wrap">
+      <textarea id="user-input" rows="1" placeholder="Ask a question about ELTE Faculty of Informatics…"></textarea>
+      <button id="send-btn" onclick="sendMessage()" title="Send">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+    <div class="input-hint">Press Enter to send &nbsp;·&nbsp; Shift+Enter for new line</div>
+  </div>
+</main>
+
+<script>
+  const API = 'http://localhost:8000';
+  let isWaiting = false;
+
+  // ── Status check ──
+  async function checkStatus() {
+    try {
+      const r = await fetch(`${API}/health`, { signal: AbortSignal.timeout(5000) });
+      const d = await r.json();
+      const dot  = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      if (d.ollama) {
+        dot.className  = 'status-dot online';
+        text.textContent = 'Online';
+      } else {
+        dot.className  = 'status-dot offline';
+        text.textContent = 'Ollama offline';
+      }
+    } catch {
+      document.getElementById('status-dot').className  = 'status-dot offline';
+      document.getElementById('status-text').textContent = 'Unavailable';
+    }
+  }
+  checkStatus();
+  setInterval(checkStatus, 30000);
+
+  // ── Auto-resize textarea ──
+  const input = document.getElementById('user-input');
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+
+  // ── Send suggestion chip ──
+  function sendSuggestion(btn) {
+    input.value = btn.textContent;
+    sendMessage();
+  }
+
+  // ── New chat ──
+  function newChat() {
+    const msgs = document.getElementById('messages');
+    msgs.innerHTML = '';
+    msgs.appendChild(document.getElementById('welcome') || createWelcome());
+    // restore welcome if it was removed
+    if (!document.getElementById('welcome')) {
+      const w = document.createElement('div');
+      w.id = 'welcome';
+      w.className = 'welcome';
+      w.innerHTML = `
+        <div class="welcome-icon">
+          <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg>
+        </div>
+        <h2>How can I help you?</h2>
+        <p>Ask me anything about the ELTE Faculty of Informatics — curriculum, prerequisites, exam rules, registration, or admissions.</p>
+        <div class="suggestion-chips">
+          <button class="chip" onclick="sendSuggestion(this)">What is a strong prerequisite?</button>
+          <button class="chip" onclick="sendSuggestion(this)">How does Neptun handle registration?</button>
+          <button class="chip" onclick="sendSuggestion(this)">What BSc programs are available?</button>
+          <button class="chip" onclick="sendSuggestion(this)">What is a weak prerequisite?</button>
+        </div>`;
+      msgs.appendChild(w);
+    }
+  }
+
+  // ── Send message ──
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text || isWaiting) return;
+
+    // Hide welcome
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.remove();
+
+    addMessage('user', text);
+    input.value = '';
+    input.style.height = 'auto';
+
+    const typingEl = addTyping();
+    setWaiting(true);
+
+    try {
+      const res = await fetch(`${API}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+
+      typingEl.remove();
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Server error' }));
+        addMessage('error', err.detail || `Error ${res.status}`);
+        return;
+      }
+
+      const data = await res.json();
+      addMessage('bot', data.answer, data.sources);
+
+    } catch (err) {
+      typingEl.remove();
+      addMessage('error', 'Could not reach the server. Make sure the backend is running.');
+    } finally {
+      setWaiting(false);
+    }
+  }
+
+  function setWaiting(val) {
+    isWaiting = val;
+    document.getElementById('send-btn').disabled = val;
+    input.disabled = val;
+  }
+
+  // ── Append a message bubble ──
+  function addMessage(role, text, sources = []) {
+    const msgs = document.getElementById('messages');
+
+    const wrap = document.createElement('div');
+    wrap.className = `msg ${role === 'user' ? 'user' : role === 'error' ? 'bot error' : 'bot'}`;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = role === 'user' ? 'You' : 'IK';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = text;
+
+    // Sources
+    if (sources && sources.length > 0) {
+      const srcWrap = document.createElement('div');
+      srcWrap.className = 'sources';
+
+      const toggle = document.createElement('button');
+      toggle.className = 'sources-toggle';
+      toggle.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 17l5-5-5-5v10z"/></svg>${sources.length} source${sources.length > 1 ? 's' : ''}`;
+
+      const list = document.createElement('div');
+      list.className = 'sources-list';
+
+      // Deduplicate by file name
+      const seen = new Set();
+      sources.forEach(s => {
+        if (!seen.has(s.file)) {
+          seen.add(s.file);
+          const tag = document.createElement('span');
+          tag.className = 'source-tag';
+          tag.textContent = s.file;
+          list.appendChild(tag);
+        }
+      });
+
+      toggle.addEventListener('click', () => {
+        list.classList.toggle('visible');
+        toggle.classList.toggle('open');
+      });
+
+      srcWrap.appendChild(toggle);
+      srcWrap.appendChild(list);
+      bubble.appendChild(srcWrap);
+    }
+
+    wrap.appendChild(avatar);
+    wrap.appendChild(bubble);
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
+    return wrap;
+  }
+
+  // ── Typing indicator ──
+  function addTyping() {
+    const msgs = document.getElementById('messages');
+    const wrap = document.createElement('div');
+    wrap.className = 'msg bot typing';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = 'IK';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+
+    wrap.appendChild(avatar);
+    wrap.appendChild(bubble);
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
+    return wrap;
+  }
+</script>
+</body>
+</html>
