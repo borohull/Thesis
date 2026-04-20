@@ -1,0 +1,61 @@
+% !TEX root = ../elteikthesis_en.tex
+\chapter{Introduction}
+\label{ch:intro}
+
+% ─────────────────────────────────────────────────────────────
+\section{Motivation}
+\label{sec:intro-motivation}
+
+Students and staff at the Faculty of Informatics of Eötvös Loránd University face a recurring practical challenge: finding accurate, up-to-date answers to questions about the curriculum. Which courses must be completed before enrolling in a given subject? What are the rules for repeating a failed exam? How does the Neptun system handle course registration? The answers to these questions exist — scattered across faculty web pages, downloadable PDF regulations, DOCX course descriptions, and administrative guidelines — but locating the right document, navigating to the right section, and extracting a clear answer can take considerably longer than it should.
+
+General-purpose search engines return ranked lists of pages; they do not synthesise an answer from multiple sources or understand the specific terminology of Hungarian higher education. A student who types ``weak prerequisite ELTE'' into a search engine receives a list of links to navigate rather than a direct explanation. As the volume of documentation grows each semester, and as more information migrates to sub-pages that are hard to discover by browsing, the gap between the information that exists and the information that students can efficiently find continues to widen.
+
+Recent advances in large language models (LLMs) have demonstrated that natural language question answering over document collections is now technically feasible~\cite{lewis2020rag,brown2020gpt3}. A system that allows a user to ask a question in plain English and receive a grounded, source-cited answer drawn from official faculty documents would substantially reduce the time students and staff spend searching for administrative information.
+
+% ─────────────────────────────────────────────────────────────
+\section{Problem Statement}
+\label{sec:intro-problem}
+
+The simplest path to such a system is to send user queries to a commercial LLM API — services such as OpenAI's GPT or Google's Gemini. This approach has two fundamental problems for an institutional deployment.
+
+\paragraph{Privacy.} Every query sent to a cloud API leaves the institution's network. Questions about exam outcomes, registration status, or academic standing may constitute personal data under the European Union's General Data Protection Regulation (GDPR). Routing such queries through a third-party server without explicit data processing agreements is legally problematic and contrary to the data sovereignty expectations of a public university.
+
+\paragraph{Domain knowledge.} General-purpose LLMs are trained on broad internet text. They have limited, unreliable knowledge of ELTE-specific regulations, course codes, or administrative procedures. Without grounding in official faculty documents, a cloud LLM would hallucinate plausible-sounding but incorrect answers — precisely the failure mode that is most harmful in an academic advising context.
+
+Fine-tuning a model on faculty documents would partially address the knowledge gap, but it requires GPU hardware, significant training time, and a complete re-run every time the documentation changes. For a small faculty with rotating regulations, this is not operationally sustainable.
+
+No dedicated, locally deployed question-answering system currently exists for ELTE Faculty of Informatics. Students and staff rely on direct web search, email queries to administrative offices, or unofficial peer advice — all of which are slow and inconsistently accurate.
+
+% ─────────────────────────────────────────────────────────────
+\section{Goals and Contributions}
+\label{sec:intro-goals}
+
+This thesis designs, implements, and evaluates a locally deployed retrieval-augmented generation (RAG) chatbot for the ELTE Faculty of Informatics. The system answers natural language questions about curriculum, prerequisites, exam rules, course registration, and admissions by retrieving relevant passages from an offline collection of official faculty documents and generating grounded answers using a quantised local language model.
+
+The specific contributions of this work are as follows.
+
+\begin{itemize}
+  \item \textbf{A document collection pipeline.} A resumable breadth-first web crawler collects HTML pages, PDF files, and DOCX documents from the faculty's public web presence, producing a corpus of 482 source files. An incremental ingestion pipeline maintains a SHA-256 manifest so that only new or changed files need to be reprocessed when the corpus is updated.
+
+  \item \textbf{An offline RAG pipeline.} Documents are chunked and encoded into a 384-dimensional vector space using the \texttt{all-MiniLM-L6-v2} sentence embedding model. Chunks are stored in a ChromaDB vector database. At query time the top-$K$ most relevant chunks are retrieved by cosine similarity and assembled into a grounded prompt for the language model.
+
+  \item \textbf{A local language model backend.} The system uses Llama~3.2~(3B) or Gemma~3~(4B), served locally by Ollama, for answer generation. No query or document ever leaves the host machine. The entire system runs on a standard laptop with 8~GB of RAM and no dedicated GPU.
+
+  \item \textbf{A production-quality REST API and chat interface.} A FastAPI backend exposes the RAG pipeline over HTTP, logs all interactions to a local SQLite database, and supports user-uploaded documents. A browser-based chat interface, styled to match the faculty's visual identity, provides a usable front end with session history, source references, and real-time response timing.
+
+  \item \textbf{An empirical evaluation.} The system is benchmarked against a no-RAG baseline using 20 test questions drawn from actual student queries. Results are reported in terms of answer accuracy, ROUGE-L overlap, source faithfulness, and response latency.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────
+\section{Thesis Structure}
+\label{sec:intro-structure}
+
+The remainder of this thesis is organised as follows.
+
+\textbf{Chapter~\ref{ch:background}} surveys the technical foundations: large language models and their limitations, small and quantised local models, the retrieval-augmented generation paradigm and its advantages over fine-tuning, existing university chatbot deployments, and the justification for each technology choice made in this project.
+
+\textbf{Chapter~\ref{ch:requirements}} defines the system requirements. It identifies the three user roles, states the functional requirements across seven areas (natural language querying, document ingestion, embedding and retrieval, answer generation, REST API, web interface, and interaction logging), and specifies the non-functional constraints (privacy, resource limits, latency, offline operation, reliability, and maintainability).
+
+\textbf{Chapter~\ref{ch:impl}} describes the full implementation of the system across its four layers: data collection and ingestion, embedding and vector storage, the RAG backend, and the frontend. It covers the key design decisions, data structures, and code that realise each layer.
+
+\textbf{Chapter~\ref{ch:sum}} presents the evaluation methodology and results, discusses the strengths and limitations of the system, and outlines directions for future work, including multilingual support, a larger model option, and a user feedback loop.

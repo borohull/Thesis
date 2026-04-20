@@ -66,10 +66,10 @@ def call_ollama(prompt: str, model: str = OLLAMA_MODEL) -> str:
         raise RuntimeError(f"Unexpected Ollama response: {r.text[:200]}")
 
 
-def rag_query(query: str) -> dict:
+def rag_query(query: str, model: str = OLLAMA_MODEL) -> dict:
     chunks = retrieve(query)
     prompt = build_prompt(query, chunks)
-    answer = call_ollama(prompt)
+    answer = call_ollama(prompt, model=model)
     return {
         "answer": answer,
         "sources": [

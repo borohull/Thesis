@@ -27,8 +27,8 @@ Requires the FastAPI server to be running.
 ### Run the data pipeline (one-time setup)
 ```bash
 # Step 1: Crawl ELTE websites (downloads to data/raw/)
-python crawler.py
-# Reset and re-crawl: python crawler.py --reset
+python scripts/crawler.py
+# Reset and re-crawl: python scripts/crawler.py --reset
 
 # Step 2-4: Run notebooks in order
 # 01_data_ingestion.ipynb  → produces data/processed/chunks.json
