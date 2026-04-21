@@ -69,11 +69,13 @@ All tunable parameters live in `app/settings.py`:
 
 ## Evaluation
 
-`notebooks/05_evaluation.ipynb` benchmarks two configs against 20 test questions (15 in-scope, 5 out-of-scope):
-- **Config A**: Raw Ollama (no RAG)
-- **Config B**: RAG with top-3 chunks
+`notebooks/04_evaluation.ipynb` benchmarks four configs against 20 test questions (15 in-scope, 5 out-of-scope):
+- **A1**: llama3.2:3b, no RAG
+- **B1**: llama3.2:3b, RAG (top-5 chunks)
+- **A2**: gemma3:4b, no RAG
+- **B2**: gemma3:4b, RAG (top-5 chunks)
 
-Metrics: ROUGE-L, faithfulness (chunk overlap), refusal rate (out-of-scope), response time. Results saved to `data/evaluation/`.
+Metrics: ROUGE-L, faithfulness (chunk overlap), refusal rate (out-of-scope), retrieval hit-rate, response time. Results saved to `data/evaluation/`.
 
 ## Feature Planning
 
