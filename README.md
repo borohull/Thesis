@@ -1,158 +1,144 @@
 # ELTE Informatics Chatbot
 
-A local RAG-based chatbot for the ELTE Faculty of Informatics. Answers student and staff questions about curriculum, prerequisites, exam rules, registration, and other faculty-related information using a small local language model — no cloud APIs required.
+A local, privacy-preserving RAG (Retrieval-Augmented Generation) chatbot for the ELTE Faculty of Informatics. It answers student and staff questions about curriculum, prerequisites, exam rules, and registration using content crawled from official ELTE sources. The entire stack runs offline: a local LLM via Ollama, embeddings via sentence-transformers, and a ChromaDB vector store, served through a FastAPI backend.
 
-Built as a BSc thesis project.
+## Features
+
+- **Fully local** — no external API calls; all inference and retrieval happen on your machine.
+- **RAG pipeline** — retrieves the top-K relevant chunks from ChromaDB and grounds the LLM answer in cited sources.
+- **Multi-format ingestion** — HTML, PDF, and DOCX documents crawled via BFS from ELTE websites.
+- **Incremental ingestion** — SHA-256 manifest avoids re-embedding unchanged documents.
+- **User file uploads** — attach documents to a chat session for ad-hoc Q&A.
+- **Runtime model switching** — swap between Ollama models (e.g. `llama3.2:3b`, `gemma3:4b`) from the UI.
+- **Session history** — persistent chats with delete support.
+- **SQLite logging** — every query, retrieval, and response is logged for evaluation.
+- **Minimal web UI** — self-contained HTML/JS frontend with ELTE brand styling.
 
 ## Architecture
 
 ```
-                  Browser (index.html)
-                         |
-                    POST /chat
-                         |
-                   FastAPI Backend
-                   /            \
-           ChromaDB              Ollama
-        (vector search)       (llama3.2:3b)
-              |
-        Embedded Chunks
-     (all-MiniLM-L6-v2)
+Browser ──► FastAPI (app/) ──► ChromaDB (data/processed/chroma_db/)
+                      └─────► Ollama (localhost:11434)
 ```
 
-**Query flow:** User question → retrieve top-K similar document chunks from ChromaDB → build context-aware prompt → send to local LLM via Ollama → return answer with source citations.
+**Data pipeline** (one-time, build the vector store):
+
+1. `scripts/crawler.py` — BFS crawl of ELTE sites → `data/raw/` (HTML, PDF, DOCX)
+2. `notebooks/01_data_ingestion.ipynb` — load + chunk documents → `data/processed/chunks.json`
+3. `notebooks/02_embedding.ipynb` — encode chunks → ChromaDB `elte_ik` collection
+4. `notebooks/03_RAG_pipeline.ipynb` — end-to-end RAG sanity check
+
+**Serving pipeline** (FastAPI):
+
+- `app/settings.py` — config constants (paths, model names, `TOP_K`, temperature)
+- `app/rag.py` — ChromaDB + SentenceTransformer singletons; `retrieve()`, `build_prompt()`, `call_ollama()`, `rag_query()`
+- `app/main.py` — REST endpoints (`/chat`, `/health`, uploads, sessions, models)
+- `app/logger.py` — SQLite logging to `data/logs/chat_logs.db`
+- `app/static/index.html` — chat UI
+
+## Prerequisites
+
+- Python 3.10+
+- [Ollama](https://ollama.com) running locally
+- At least one Ollama model pulled:
+  ```bash
+  ollama pull llama3.2:3b
+  ```
+
+## Installation
+
+```bash
+git clone <repo-url>
+cd elte_chat
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+## Usage
+
+### Run the API server
+
+```bash
+uvicorn app.main:app --reload
+```
+
+The server starts at `http://localhost:8000`. The chat UI is available at `http://localhost:8000/static/index.html`.
+
+### CLI client
+
+```bash
+python scripts/chat_cli.py
+```
+
+Requires the FastAPI server to be running.
+
+### Build the vector store
+
+```bash
+# 1. Crawl ELTE sources (resumable; --reset to start fresh)
+python scripts/crawler.py
+
+# 2. Run the ingestion notebooks in order
+#    notebooks/01_data_ingestion.ipynb
+#    notebooks/02_embedding.ipynb
+#    notebooks/03_RAG_pipeline.ipynb
+```
+
+## Configuration
+
+All tunable parameters live in `app/settings.py`:
+
+| Setting           | Default                     | Notes                                                   |
+| ----------------- | --------------------------- | ------------------------------------------------------- |
+| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2`          | Must match the model used in `02_embedding.ipynb`       |
+| `COLLECTION_NAME` | `elte_ik`                   | ChromaDB collection name                                |
+| `TOP_K`           | `3`                         | Chunks retrieved per query                              |
+| `OLLAMA_MODEL`    | `llama3.2:3b`               | Must be pulled in Ollama                                |
+| `TEMPERATURE`     | `0.1`                       | Low = factual, less hallucination                       |
+| `CHROMA_PATH`     | `data/processed/chroma_db`  | Relative to project root                                |
+
+## Evaluation
+
+`notebooks/04_evaluation.ipynb` benchmarks four configurations against 20 test questions (15 in-scope, 5 out-of-scope):
+
+| Config | Model         | Retrieval |
+| ------ | ------------- | --------- |
+| A1     | `llama3.2:3b` | No RAG    |
+| B1     | `llama3.2:3b` | RAG (top-5) |
+| A2     | `gemma3:4b`   | No RAG    |
+| B2     | `gemma3:4b`   | RAG (top-5) |
+
+Metrics: ROUGE-L, faithfulness (chunk overlap), refusal rate on out-of-scope queries, retrieval hit-rate, and response time. Results are written to `data/evaluation/`.
 
 ## Project Structure
 
 ```
 elte_chat/
-├── app/
-│   ├── main.py              # FastAPI server (/chat, /health)
-│   ├── rag.py               # RAG pipeline (retrieve, prompt, call LLM)
-│   ├── settings.py          # Configuration constants
-│   ├── logger.py            # SQLite chat logging
-│   └── static/
-│       └── index.html       # Chat UI (self-contained)
-├── notebooks/
-│   ├── 01_data_ingestion.ipynb   # Load & chunk documents
-│   ├── 02_embedding.ipynb        # Generate embeddings → ChromaDB
-│   ├── 03_RAG_pipeline.ipynb     # End-to-end RAG testing
-│   └── 05_evaluation.ipynb       # Evaluation (ROUGE-L, faithfulness)
+├── app/                    # FastAPI backend
+│   ├── main.py             # API endpoints
+│   ├── rag.py              # retrieval + generation
+│   ├── settings.py         # configuration
+│   ├── logger.py           # SQLite logging
+│   └── static/             # web UI
 ├── scripts/
-│   └── chat_cli.py          # CLI chat client
-├── crawler.py               # Web crawler for ELTE sites
+│   ├── crawler.py          # BFS web crawler
+│   └── chat_cli.py         # terminal client
+├── notebooks/              # data pipeline + evaluation
 ├── data/
-│   ├── raw/                 # Crawled HTML, PDFs, DOCX (gitignored)
-│   ├── processed/           # chunks.json + chroma_db/ (gitignored)
-│   └── logs/                # SQLite chat logs
+│   ├── raw/                # crawled source files
+│   ├── processed/          # chunks.json + ChromaDB
+│   ├── logs/               # chat_logs.db
+│   └── evaluation/         # benchmark results
 └── requirements.txt
 ```
 
-## Tech Stack
+## Key Constraints
 
-| Component | Technology |
-|-----------|-----------|
-| Backend | Python, FastAPI, Uvicorn |
-| LLM | Ollama (llama3.2:3b, local) |
-| Embeddings | sentence-transformers (all-MiniLM-L6-v2, 384-dim) |
-| Vector DB | ChromaDB (persistent, cosine similarity) |
-| Document loading | LangChain, PyMuPDF, BeautifulSoup, python-docx |
-| Web crawler | httpx, BeautifulSoup |
-| Frontend | Vanilla HTML/CSS/JS |
-| Logging | SQLite |
+- **Embedding model consistency** — `settings.EMBEDDING_MODEL` must match the model used when building the ChromaDB index. Changing it requires re-running `02_embedding.ipynb`.
+- **Ollama must be running** — `/health` reports its status; `/chat` will error if Ollama is down.
+- **Run from the project root** — paths in `settings.py` are relative to the repo root.
 
-## Setup
+## License
 
-### Prerequisites
-
-- Python 3.10+
-- [Ollama](https://ollama.ai/) installed and running
-
-### Installation
-
-```bash
-# Clone the repo
-git clone https://github.com/borohull/elte_chat.git
-cd elte_chat
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-.venv\Scripts\activate     # Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Pull the LLM
-ollama pull llama3.2:3b
-```
-
-### Data Pipeline
-
-Run the notebooks in order to build the knowledge base:
-
-```bash
-# 1. Crawl ELTE websites
-python crawler.py --reset
-
-# 2. Open Jupyter and run notebooks sequentially
-jupyter notebook notebooks/
-```
-
-- **01_data_ingestion.ipynb** — Loads crawled files (HTML, PDF, DOCX), cleans text, splits into chunks, saves to `data/processed/chunks.json`
-- **02_embedding.ipynb** — Encodes chunks with sentence-transformers, upserts into ChromaDB
-- **03_RAG_pipeline.ipynb** — Tests the full retrieve → prompt → answer pipeline
-
-### Run the App
-
-```bash
-# Start Ollama (if not already running)
-ollama serve
-
-# Start the backend
-uvicorn app.main:app --reload
-
-# Open the chat UI
-# http://localhost:8000/static/index.html
-```
-
-## Crawler
-
-The crawler recursively scrapes English-language pages from ELTE websites:
-
-- **inf.elte.hu/en/** — Full Faculty of Informatics site
-- **www.elte.hu/en/** — 20 whitelisted student-focused pages (housing, finances, visa, etc.)
-
-```bash
-python crawler.py              # Resumable — skips already-downloaded pages
-python crawler.py --reset      # Wipe data/raw/ and data/processed/, then crawl fresh
-```
-
-Features:
-- BFS crawl with 0.5s politeness delay
-- English-only filtering (URL path, `<html lang>`, `<meta>` tag)
-- Automatic PDF and DOCX download from discovered links
-- Domain-mirrored folder structure in `data/raw/`
-
-## Evaluation
-
-The evaluation notebook (`05_evaluation.ipynb`) tests the system on 20 faculty-specific questions, comparing:
-
-| Config | Description |
-|--------|------------|
-| A | Raw Ollama (no RAG) |
-| B | RAG-augmented |
-| C | RAG + fine-tuned (placeholder) |
-
-Metrics: ROUGE-L, faithfulness (chunk overlap), refusal rate, response time.
-
-## Configuration
-
-Key settings in `app/settings.py`:
-
-```python
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-OLLAMA_MODEL    = "llama3.2:3b"
-TOP_K           = 3
-TEMPERATURE     = 0.1
-```
+Academic thesis project — ELTE Faculty of Informatics.
