@@ -1,0 +1,168 @@
+% !TEX root = ../elteikthesis_en.tex
+\chapter{Requirements Analysis}
+\label{ch:requirements}
+
+This chapter documents the requirements that shaped the design and implementation of the ELTE IK Assistant. Defining requirements explicitly before implementation serves two purposes: it provides a clear contract between what the system must do and what was actually built, and it records the constraints — privacy, resource limits, offline operation — that ruled out simpler alternatives such as forwarding queries to a cloud API. The requirements below were derived from the faculty use-case, the hardware constraints of a typical student laptop, and the privacy expectations appropriate for an institutional tool.
+
+% ─────────────────────────────────────────────────────────────
+\section{System Goals}
+\label{sec:req-goals}
+
+The ELTE IK Assistant must satisfy the following high-level goals:
+
+\begin{itemize}
+    \item Accept natural language questions about the Faculty of Informatics — curriculum, course prerequisites, exam rules, and Neptun registration procedures — and return accurate, document-grounded answers.
+    \item Operate entirely offline after initial setup: no user query, no retrieved chunk, and no generated answer may leave the local machine.
+    \item Run on commodity student hardware with 8~GB of RAM and no dedicated GPU, using a quantised small language model.
+    \item Ground every answer in official faculty documents and expose the source references so the user can verify or read further.
+    \item Degrade gracefully when the local language model is unavailable rather than crashing or returning misleading output.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────
+\section{User Types}
+\label{sec:req-users}
+
+Three distinct roles interact with the system, each with different needs and permissions.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|p{0.35\textwidth}|p{0.35\textwidth}|}
+        \hline
+        \textbf{Role} & \textbf{Description} & \textbf{Primary actions} \\
+        \hline \hline
+        BSc / MSc Student &
+            Primary end-user. Asks questions about course requirements, registration deadlines, exam regulations, and scholarship rules. &
+            Submits chat queries; reads generated answers and source file references. \\
+        \hline
+        Faculty Staff &
+            Secondary end-user. Queries administrative procedures, credit transfer rules, and official regulations on behalf of students or for personal reference. &
+            Same chat interface as the student role; no administrative privileges. \\
+        \hline
+        System Administrator &
+            Installs, configures, and maintains the system. Responsible for keeping the document corpus up to date. &
+            Runs the crawler and data pipeline notebooks; starts and stops the FastAPI server; monitors the SQLite chat log. \\
+        \hline
+    \end{tabular}
+    \caption{User roles and their primary interactions with the system.}
+    \label{tab:user-roles}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+\section{Functional Requirements}
+\label{sec:req-functional}
+
+\subsection{Natural Language Query Processing}
+\label{subsec:req-nlq}
+
+\begin{itemize}
+    \item The system must accept a free-text question in English and return a textual answer.
+    \item Every answer must include citations identifying which source documents were used.
+    \item When the answer to a question is not present in the indexed documents, the system must say so explicitly rather than generating a plausible-sounding but unsupported response.
+    \item The query interface must be accessible from a web browser without installing any client-side software.
+\end{itemize}
+
+\subsection{Document Ingestion Pipeline}
+\label{subsec:req-ingestion}
+
+\begin{itemize}
+    \item The pipeline must load HTML pages, PDF files, and DOCX documents from the crawled corpus without manual preprocessing.
+    \item Raw text must be cleaned (whitespace normalisation, removal of navigation boilerplate) and split into overlapping chunks suitable for embedding.
+    \item The pipeline must track which source files have changed since the last run using a content hash and re-process only new or modified files, leaving unchanged chunks untouched.
+    \item Processed chunks must be persisted in a format that allows the embedding step to run independently and reproducibly.
+\end{itemize}
+
+\subsection{Embedding and Retrieval}
+\label{subsec:req-retrieval}
+
+\begin{itemize}
+    \item Each text chunk must be encoded into a dense vector embedding using a sentence-level embedding model.
+    \item All embeddings must be stored in a persistent local vector database that survives application restarts without re-computation.
+    \item Given a user query, the system must retrieve the top-$K$ chunks whose embeddings are most similar to the query embedding, where $K$ is configurable.
+\end{itemize}
+
+\subsection{Answer Generation}
+\label{subsec:req-generation}
+
+\begin{itemize}
+    \item Retrieved chunks must be assembled into a structured prompt that constrains the language model to answer only from the provided context.
+    \item The language model must run locally; no external API call may be made during inference.
+    \item The generated answer and the list of source chunk identifiers must be returned together so the frontend can display both.
+\end{itemize}
+
+\subsection{REST API}
+\label{subsec:req-api}
+
+The backend must expose the following HTTP endpoints.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|p{0.50\textwidth}|}
+        \hline
+        \textbf{Method} & \textbf{Path} & \textbf{Description} \\
+        \hline \hline
+        GET  & \texttt{/}       & Serves the single-page chat interface. \\
+        \hline
+        GET  & \texttt{/health} & Returns application status and whether the local language model is reachable. \\
+        \hline
+        POST & \texttt{/chat}   & Accepts a natural language message and returns the generated answer together with source references. \\
+        \hline
+    \end{tabular}
+    \caption{Required HTTP endpoints.}
+    \label{tab:req-endpoints}
+\end{table}
+
+\subsection{Web Interface}
+\label{subsec:req-ui}
+
+\begin{itemize}
+    \item The interface must display the full conversation history in a scrollable chat area.
+    \item Each assistant reply must list the source file names used to generate it.
+    \item A status indicator must inform the user whether the local language model is currently available before they submit their first question.
+    \item The interface must handle server errors gracefully by displaying an inline message rather than a blank page or browser error.
+\end{itemize}
+
+\subsection{Interaction Logging}
+\label{subsec:req-logging}
+
+\begin{itemize}
+    \item Every interaction must be recorded persistently, including the user's message, the generated answer, the source references, the end-to-end response time, and any error that occurred.
+    \item Logged data must be queryable programmatically to support offline evaluation.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────
+\section{Non-Functional Requirements}
+\label{sec:req-nonfunctional}
+
+\subsection{Privacy and Data Sovereignty}
+\label{subsec:req-privacy}
+
+No user query, retrieved document chunk, or generated answer may be transmitted outside the local machine. This requirement rules out any cloud-hosted language model API and any third-party telemetry. The system must remain fully functional in a network-isolated environment once its initial data has been downloaded.
+
+\subsection{Resource Constraints}
+\label{subsec:req-resources}
+
+The system must run on a machine with 8~GB of RAM and no discrete GPU. The language model must therefore be a quantised variant (4-bit or 8-bit) that fits in memory alongside the operating system and other standard processes. The embedding model must be small enough to perform inference on CPU within a latency budget compatible with interactive use.
+
+\subsection{Response Latency}
+\label{subsec:req-latency}
+
+The end-to-end response time — from the user pressing Send to the answer appearing in the browser — must not exceed 90~seconds on the reference hardware (8~GB RAM, CPU-only) under normal load. This budget reflects the practical cost of running a quantised 3--4~billion-parameter language model on CPU without GPU acceleration: embedding and vector retrieval complete in under one second, while language model generation typically takes 30--80~seconds depending on answer length and model. Response times are logged in milliseconds so that latency can be reported precisely in the evaluation chapter.
+
+\subsection{Offline Operation}
+\label{subsec:req-offline}
+
+After the initial setup phase (pulling the language model and crawling the ELTE websites), the system must function without any network connection. The web crawler is the only component that requires internet access. All subsequent pipeline steps — chunking, embedding, retrieval, and generation — must work entirely from local storage.
+
+\subsection{Reliability and Graceful Degradation}
+\label{subsec:req-reliability}
+
+\begin{itemize}
+    \item If the local language model process is not running, the \texttt{/health} endpoint must report its unavailability and the \texttt{/chat} endpoint must return a descriptive HTTP~503 error rather than timing out silently.
+    \item The system must not corrupt the vector store or the chat log database on unexpected shutdown or process termination.
+    \item Re-running the data pipeline must be idempotent: running it twice on the same corpus must produce the same vector store state as running it once.
+\end{itemize}
+
+\subsection{Maintainability and Configurability}
+\label{subsec:req-maintainability}
+
+All tunable parameters — the language model name, the embedding model name, the number of retrieved chunks ($K$), the generation temperature, file paths, and timeouts — must be defined in a single, centralised configuration module. Swapping the language model or adjusting retrieval depth must require only a one-line change in that module, without modifying any business logic. Changing the embedding model additionally requires re-running the embedding notebook to rebuild the vector store with the new model's vector space.

@@ -1,0 +1,264 @@
+% !TEX root = ../elteikthesis_en.tex
+
+\chapter{User Documentation}
+\label{ch:user}
+
+This chapter describes how to install, configure, and use the ELTE Informatics Chatbot.
+The system consists of a one-time data pipeline that builds the knowledge base, and a
+FastAPI server that answers questions through a browser-based interface or a command-line
+client.
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{System Requirements}
+\label{sec:user-requirements}
+
+The application is designed to run on a single personal computer without a GPU.
+Table~\ref{tab:sys-req} lists the minimum requirements.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ | m{0.28\textwidth} | m{0.62\textwidth} | }
+        \hline
+        \textbf{Component} & \textbf{Requirement} \\
+        \hline \hline
+        Operating system & Windows 10/11, macOS 12+, or Ubuntu 22.04+ \\
+        \hline
+        RAM & 8~GB (16~GB recommended) \\
+        \hline
+        Disk space & $\approx$6~GB (models + vector store + crawled data) \\
+        \hline
+        Python & 3.10 or newer \\
+        \hline
+        Ollama & Latest release (\url{https://ollama.com}) \\
+        \hline
+        Internet access & Required only during the initial setup phase \\
+        \hline
+    \end{tabular}
+    \caption{Minimum system requirements}
+    \label{tab:sys-req}
+\end{table}
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Installation}
+\label{sec:user-install}
+
+\subsection{Install Ollama}
+
+Download and install Ollama from \url{https://ollama.com/download} for your operating
+system. After installation, start the Ollama background service:
+
+\begin{lstlisting}[language=bash]
+ollama serve
+\end{lstlisting}
+
+Pull the two language models used in the system:
+
+\begin{lstlisting}[language=bash]
+ollama pull llama3.2:3b
+ollama pull gemma3:4b
+\end{lstlisting}
+
+\subsection{Clone the Repository and Create a Virtual Environment}
+
+\begin{lstlisting}[language=bash]
+git clone https://github.com/borohull/Thesis.git
+cd Thesis/elte_chat
+python -m venv .venv
+\end{lstlisting}
+
+Activate the virtual environment:
+
+\begin{compactitem}
+    \item \textbf{Windows:} \texttt{.venv\textbackslash Scripts\textbackslash activate}
+    \item \textbf{macOS / Linux:} \texttt{source .venv/bin/activate}
+\end{compactitem}
+
+\bigskip
+Install the Python dependencies:
+
+\begin{lstlisting}[language=bash]
+pip install -r requirements.txt
+\end{lstlisting}
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Building the Knowledge Base}
+\label{sec:user-pipeline}
+
+Before the chatbot can answer questions, the knowledge base must be built.
+This is a one-time process consisting of three steps.
+
+\subsection{Step 1 — Crawl the ELTE Websites}
+
+The crawler downloads HTML pages and PDF documents from the ELTE Faculty of Informatics
+website and saves them to \texttt{data/raw/}:
+
+\begin{lstlisting}[language=bash]
+python scripts/crawler.py
+\end{lstlisting}
+
+To start fresh and discard previously downloaded files, pass the \texttt{-{}-reset} flag:
+
+\begin{lstlisting}[language=bash]
+python scripts/crawler.py --reset
+\end{lstlisting}
+
+The crawler performs a breadth-first traversal starting from the faculty homepage.
+Downloaded files are tracked in a manifest so that subsequent runs only fetch new or
+changed documents.
+
+\subsection{Step 2 — Chunk and Embed Documents}
+
+Open JupyterLab or Jupyter Notebook and run the following notebooks in order:
+
+\begin{enumerate}
+    \item \textbf{\texttt{notebooks/01\_data\_ingestion.ipynb}} — loads the raw files,
+          splits them into overlapping text chunks, and writes the result to
+          \texttt{data/processed/chunks.json}.
+    \item \textbf{\texttt{notebooks/02\_embedding.ipynb}} — encodes each chunk with the
+          \texttt{all-MiniLM-L6-v2} sentence-transformer model and stores the resulting
+          vectors in the ChromaDB collection \texttt{elte\_ik} under
+          \texttt{data/processed/chroma\_db/}.
+\end{enumerate}
+
+Both notebooks must be run to completion before starting the API server.
+Running notebook~02 on a CPU with several thousand chunks typically takes a few minutes.
+
+\subsection{Configuration}
+
+All tunable parameters are defined in \texttt{app/settings.py}.
+The most commonly adjusted settings are listed in Table~\ref{tab:settings}.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ | m{0.3\textwidth} | m{0.18\textwidth} | m{0.42\textwidth} | }
+        \hline
+        \textbf{Setting} & \textbf{Default} & \textbf{Description} \\
+        \hline \hline
+        \texttt{OLLAMA\_MODEL} & \texttt{llama3.2:3b} & Default language model \\
+        \hline
+        \texttt{TOP\_K} & \texttt{5} & Chunks retrieved per query \\
+        \hline
+        \texttt{TEMPERATURE} & \texttt{0.1} & LLM sampling temperature \\
+        \hline
+        \texttt{EMBEDDING\_MODEL} & \texttt{all-MiniLM-L6-v2} & Must match notebook~02 \\
+        \hline
+    \end{tabular}
+    \caption{Key configuration parameters in \texttt{app/settings.py}}
+    \label{tab:settings}
+\end{table}
+
+\noindent\textbf{Important:} \texttt{EMBEDDING\_MODEL} must not be changed after
+notebook~02 has been run. The query encoder and the document index must use the same
+model; a mismatch produces incorrect retrieval results.
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Starting the Server}
+\label{sec:user-server}
+
+Run the following command from the project root (with the virtual environment active and
+Ollama running):
+
+\begin{lstlisting}[language=bash]
+uvicorn app.main:app --reload
+\end{lstlisting}
+
+The server starts on \texttt{http://localhost:8000}.
+The \texttt{--reload} flag restarts the server automatically when source files change;
+omit it in production.
+
+To verify the server is healthy and Ollama is reachable, open a browser or run:
+
+\begin{lstlisting}[language=bash]
+curl http://localhost:8000/health
+\end{lstlisting}
+
+A successful response looks like:
+
+\begin{lstlisting}
+{"status": "ok", "ollama": true}
+\end{lstlisting}
+
+If \texttt{"ollama": false} appears, Ollama is not running or the selected model has
+not been pulled.
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Using the Web Interface}
+\label{sec:user-web}
+
+Open \texttt{http://localhost:8000/static/index.html} in any modern browser.
+The interface consists of three areas: a left sidebar for chat history, a central chat
+panel, and a right sidebar for model selection.
+
+\subsection{Asking a Question}
+
+Type a question in the input field at the bottom of the chat panel and press
+\textbf{Enter} or click the send button. The assistant retrieves the most relevant
+document chunks from the knowledge base, constructs a prompt, and returns an answer.
+
+Questions should relate to the ELTE Faculty of Informatics — for example:
+
+\begin{compactitem}
+    \item \emph{What is a strong prerequisite?}
+    \item \emph{Who is the Dean of the Faculty of Informatics?}
+    \item \emph{Can I take a follow-up subject before completing its prerequisite?}
+\end{compactitem}
+
+For questions outside the scope of the knowledge base, the system responds that the
+information is not available in its context rather than fabricating an answer.
+
+\subsection{Selecting a Language Model}
+
+The right sidebar lists all Ollama models currently available on the machine.
+Click a model name to switch to it for the current session.
+The default model is \texttt{llama3.2:3b}; \texttt{gemma3:4b} is also available after
+running \texttt{ollama pull gemma3:4b}.
+
+Response latency depends on model size and hardware. On a CPU-only machine with 8~GB
+of RAM, typical response times are 30--80~seconds per query.
+
+\subsection{Managing Chat Sessions}
+
+Each conversation is stored as a named session. Sessions appear in the left sidebar and
+persist across browser refreshes. To start a new conversation, click \textbf{New chat}.
+To delete a session, hover over its entry in the sidebar and click the
+\texttimes\ button that appears.
+
+\subsection{Uploading Custom Documents}
+
+In addition to the crawled ELTE content, users can upload their own PDF, HTML, or DOCX
+files to extend the knowledge base. Click the \textbf{Upload document} button above the
+input field, select a file (maximum 20~MB), and wait for the confirmation message.
+Uploaded documents are chunked, embedded, and added to the vector store immediately;
+they are available for retrieval in the same session without restarting the server.
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Using the Command-Line Client}
+\label{sec:user-cli}
+
+A lightweight CLI client is provided for scripting and testing without a browser.
+The FastAPI server must be running before the client is started:
+
+\begin{lstlisting}[language=bash]
+python scripts/chat_cli.py
+\end{lstlisting}
+
+Type a question at the \texttt{>} prompt and press Enter. The client sends the question
+to the server and prints the answer together with the source references.
+Type \texttt{exit} or press \texttt{Ctrl+C} to quit.
+
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Interaction Logs}
+\label{sec:user-logs}
+
+Every question and answer is automatically recorded in a SQLite database at
+\texttt{data/logs/chat\_logs.db}. Each row stores the timestamp, the user's message,
+the generated answer, the retrieved source references, the end-to-end response time in
+milliseconds, and any error that occurred. Logs can be inspected with any SQLite viewer
+or via the optional cell in \texttt{notebooks/04\_evaluation.ipynb}.
