@@ -59,26 +59,8 @@ docker compose down
 
 \subsection*{Option B — Manual Setup}
 
-\begin{enumerate}
-    \item Install \textbf{Ollama} from \texttt{ollama.com} and pull the model:
-\begin{lstlisting}[language=bash]
-ollama pull llama3.2:3b
-\end{lstlisting}
-
-    \item Create and activate a Python virtual environment, then install dependencies:
-\begin{lstlisting}[language=bash]
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-\end{lstlisting}
-
-    \item Start the API server from the repository root:
-\begin{lstlisting}[language=bash]
-uvicorn app.main:app --reload
-\end{lstlisting}
-
-    \item Open the chat interface at \texttt{http://localhost:8000/static/index.html}.
-\end{enumerate}
+For a manual installation without Docker, follow the step-by-step instructions
+in Section~\ref{subsec:impl-setup} of the Developer Documentation.
 
 \subsection*{Configuration}
 

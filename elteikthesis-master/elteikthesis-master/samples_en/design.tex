@@ -85,22 +85,66 @@ The strict separation between the offline and online pipelines is a deliberate c
 \section{Data Flow}
 \label{sec:design-dataflow}
 
-The complete data flow for a single user query proceeds as follows:
+Figure~\ref{fig:dataflow} shows the complete data flow for a single user query.
+The main path runs top to bottom through the serving layer; ChromaDB and the
+SQLite log are accessed as side effects of the central processing steps.
 
-\begin{enumerate}
-    \item The user types a message and presses Send. The frontend JavaScript sends a \texttt{POST /chat} request carrying the session identifier and the message text.
-    \item FastAPI routes the request to the chat handler, which calls \texttt{rag\_query(message)}.
-    \item \texttt{rag\_query} encodes the message with the singleton sentence-transformer, producing a 384-dimensional vector.
-    \item ChromaDB performs an approximate nearest-neighbour search over 6112 stored embeddings and returns the top-3 chunks with their metadata.
-    \item The RAG module assembles the prompt: it concatenates the chunk texts into a context section and appends the user question with a directive to answer from context only.
-    \item The prompt is sent to Ollama's local API with temperature 0.1 and a 120-second timeout.
-    \item Ollama streams the generated tokens and returns the complete answer string.
-    \item The RAG module returns the answer and source list to the FastAPI handler.
-    \item The handler writes the full interaction to the SQLite log and returns a JSON response to the frontend.
-    \item The frontend appends the assistant message bubble and displays the source file names as collapsible references below it.
-\end{enumerate}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.65cm and 3.0cm,
+    box/.style={rectangle, draw, rounded corners=3pt,
+                minimum width=4.0cm, minimum height=0.72cm,
+                text centered, font=\small, fill=blue!8},
+    store/.style={rectangle, draw, rounded corners=2pt,
+                  minimum width=2.8cm, minimum height=0.72cm,
+                  text centered, font=\small, fill=gray!15,
+                  double, double distance=2pt},
+    arr/.style={->, >=latex, thick},
+    lbl/.style={font=\scriptsize, fill=white, inner sep=1pt}
+]
 
-The round-trip latency for this flow is dominated by the language model inference step (Step~6). On a CPU-only machine with \texttt{llama3.2:3b} the median observed latency is approximately 48 seconds without RAG context and 70 seconds with RAG context. With \texttt{gemma3:4b} the latency is 121 seconds without RAG and 61 seconds with RAG — the shorter RAG latency reflects the model generating a more focused answer when given grounding context.
+%% ── Main spine ──────────────────────────────────────────────
+\node[box]                 (ui1)   {Browser UI};
+\node[box, below=of ui1]   (api1)  {FastAPI Handler};
+\node[box, below=of api1]  (emb)   {Sentence Transformer};
+\node[box, below=of emb]   (rag)   {RAG: Assemble Prompt};
+\node[box, below=of rag]   (llm)   {Ollama LLM};
+\node[box, below=of llm]   (api2)  {FastAPI Handler};
+\node[box, below=of api2]  (ui2)   {Browser UI};
+
+%% ── Side stores ─────────────────────────────────────────────
+\node[store, right=of emb]  (chroma) {ChromaDB};
+\node[store, right=of api2] (sqlite) {SQLite Log};
+
+%% ── Main arrows ─────────────────────────────────────────────
+\draw[arr] (ui1)  -- node[lbl,right]{POST /chat (message, session)} (api1);
+\draw[arr] (api1) -- node[lbl,right]{\texttt{rag\_query(message)}}  (emb);
+\draw[arr] (emb)  -- node[lbl,right]{384-dim query vector}          (rag);
+\draw[arr] (rag)  -- node[lbl,right]{grounded prompt}               (llm);
+\draw[arr] (llm)  -- node[lbl,right]{answer string}                 (api2);
+\draw[arr] (api2) -- node[lbl,right]{JSON response}                 (ui2);
+
+%% ── ChromaDB: query out, top-3 chunks back ──────────────────
+\draw[arr] (emb.east)     -- node[lbl,above]{query vector} (chroma.west);
+\draw[arr] (chroma.south) |- node[lbl,right,pos=0.25]{top-3 chunks} (rag.east);
+
+%% ── SQLite write ────────────────────────────────────────────
+\draw[arr] (api2.east) -- node[lbl,above]{log interaction} (sqlite.west);
+
+\end{tikzpicture}
+\caption{Data flow for a single user query. The main path (left column) shows
+the request processing sequence; ChromaDB is queried during prompt assembly and
+the interaction is logged to SQLite before the response is returned.}
+\label{fig:dataflow}
+\end{figure}
+
+The round-trip latency is dominated by the Ollama inference step. On a
+CPU-only machine with \texttt{llama3.2:3b} the median observed latency is
+approximately 48~seconds without RAG context and 70~seconds with RAG context.
+With \texttt{gemma3:4b} the figures are 121~seconds and 61~seconds respectively —
+the shorter RAG latency reflects the model generating a more focused answer when
+constrained to the provided context.
 
 % ─────────────────────────────────────────────────────────────
 \section{Storage Design}

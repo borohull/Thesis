@@ -88,7 +88,7 @@ All tunable parameters are defined in \texttt{app/settings.py}. The most commonl
     \label{tab:settings}
 \end{table}
 
-\noindent\textbf{Important:} \texttt{EMBEDDING\_MODEL} must not be changed after notebook~02 has been run. A mismatch between the query encoder and the stored index produces incorrect retrieval results.
+\noindent\textbf{Important:} \texttt{EMBEDDING\_MODEL} must be kept consistent between the index build and the serving layer. If it is changed, notebook~02 must be re-run to rebuild the vector store — a mismatch between the query encoder and the stored index produces incorrect retrieval results.
 
 \paragraph{Start the server.}
 Run the following command from the project root with the virtual environment active and Ollama running:
