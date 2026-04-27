@@ -1,0 +1,16 @@
+data/raw/
+data/logs/
+data/uploads/
+notebooks/
+scripts/
+elteikthesis-master/
+tests/
+.claude/
+.git/
+__pycache__/
+*.pyc
+*.pyo
+*.ipynb
+*.md
+*.docx
+topic.txt

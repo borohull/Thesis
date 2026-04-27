@@ -37,7 +37,9 @@ Answer:"""
 
 def check_ollama() -> bool:
     try:
-        r = requests.get("http://localhost:11434", timeout=5)
+        # Derive base URL from OLLAMA_URL (strip the /api/generate path)
+        base = OLLAMA_URL.split("/api/")[0]
+        r = requests.get(base, timeout=5)
         return r.status_code == 200
     except requests.exceptions.ConnectionError:
         return False

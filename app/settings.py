@@ -22,7 +22,7 @@ ALLOWED_UPLOAD_TYPES = {
 }
 ALLOWED_EXTENSIONS = {".pdf", ".html", ".htm", ".docx"}
 
-OLLAMA_URL      = "http://localhost:11434/api/generate"
+OLLAMA_URL      = __import__("os").getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
 OLLAMA_MODEL    = "llama3.2:3b"
 TEMPERATURE     = 0.1
 TIMEOUT_S       = 120
