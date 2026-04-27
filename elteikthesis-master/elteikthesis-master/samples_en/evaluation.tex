@@ -1,11 +1,29 @@
 % !TEX root = ../elteikthesis_en.tex
-\chapter{Evaluation}
-\label{ch:evaluation}
+\chapter{Testing}
+\label{ch:testing}
 
-This chapter presents an empirical evaluation of the ELTE IK Assistant across four configurations, measuring answer quality, faithfulness to retrieved source material, out-of-scope refusal behaviour, retrieval effectiveness, and response latency. The goal is to quantify how much value the Retrieval-Augmented Generation component adds over a plain language model baseline, and to compare the two evaluated local models under both conditions.
+This chapter covers testing and evaluation of the ELTE IK Assistant. It begins with functional testing of the API endpoints and pipeline, then presents an empirical system evaluation across four model and retrieval configurations, and concludes with a user evaluation section.
 
 % ─────────────────────────────────────────────────────────────
-\section{Evaluation Setup}
+\section{Functional Testing}
+\label{sec:testing-functional}
+
+End-to-end functional tests verify that all API endpoints respond correctly and that the full data pipeline produces consistent results. Tests cover the \texttt{/health} endpoint returning the correct Ollama status, the \texttt{/chat} endpoint returning a well-formed JSON response with an answer and source list, the \texttt{/upload} endpoint correctly chunking and embedding a submitted file, and the incremental ingestion pipeline producing an identical ChromaDB state when run twice on the same corpus. Automated functional testing is planned as future work; the results reported in Section~\ref{sec:testing-system} were verified manually against the running system.
+
+% ─────────────────────────────────────────────────────────────
+\section{User Evaluation}
+\label{sec:testing-user}
+
+A user evaluation would assess whether the target audience — ELTE Faculty of Informatics students — can operate the system successfully and receive answers they find useful. Participants would be given a set of representative tasks (finding a prerequisite, checking exam rules, uploading a personal document) and asked to complete them using the web interface. The evaluation would measure task completion rate, subjective answer quality on a Likert scale, and perceived response time acceptability. A think-aloud protocol would surface usability issues not visible in the quantitative metrics. Conducting this evaluation with a representative sample of students is identified as future work.
+
+% ─────────────────────────────────────────────────────────────
+\section{System Evaluation}
+\label{sec:testing-system}
+
+The following sections present an empirical evaluation of the system across four configurations, measuring answer quality, faithfulness to retrieved source material, out-of-scope refusal behaviour, retrieval effectiveness, and response latency. The goal is to quantify how much value the RAG component adds over a plain language model baseline, and to compare the two evaluated local models under both conditions.
+
+% ─────────────────────────────────────────────────────────────
+\subsection{Evaluation Setup}
 \label{sec:eval-setup}
 
 \subsection{Configurations}
@@ -52,7 +70,7 @@ Reference answers for in-scope questions were written manually by consulting the
 \end{description}
 
 % ─────────────────────────────────────────────────────────────
-\section{Results}
+\subsection{Results}
 \label{sec:eval-results}
 
 \subsection{Overall Metric Summary}
@@ -123,7 +141,7 @@ This is a notable safety gap: the RAG prompt template reduces but does not elimi
 All four configurations exceed the 30-second latency target defined in the requirements (NF-4). This is expected on CPU-only hardware with 4-bit quantised models: the bottleneck is autoregressive token generation, which scales linearly with the number of output tokens. Two observations are worth noting. First, RAG adds latency for \texttt{llama3.2:3b} (+23 s) but \emph{reduces} it for \texttt{gemma3:4b} ($-$60 s): when grounded by retrieved context, Gemma produces shorter, more focused answers, whereas without context it generates lengthy elaborations. Second, \texttt{llama3.2:3b} is substantially faster than \texttt{gemma3:4b} under both conditions, making it the more practical choice where latency matters more than marginal quality gains.
 
 % ─────────────────────────────────────────────────────────────
-\section{Discussion}
+\subsection{Discussion}
 \label{sec:eval-discussion}
 
 \subsection{RAG Effectiveness}

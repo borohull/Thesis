@@ -1,11 +1,11 @@
 % !TEX root = ../elteikthesis_en.tex
-\chapter{System Design}
-\label{ch:design}
+\chapter{Developer Documentation}
+\label{ch:devdocs}
 
-This chapter translates the requirements established in Chapter~\ref{ch:requirements} into a concrete system architecture. It describes what the major components are, how they interact, why each design decision was made, and what alternatives were considered and rejected. The implementation details — actual code, library usage, and operational configuration — are deferred to Chapter~\ref{ch:impl}.
+This chapter covers the full developer documentation for the ELTE IK Assistant. It begins with the system architecture and key design decisions, then details the implementation of each layer — from data collection and embedding through the RAG backend, REST API, and frontend — and concludes with setup and deployment instructions.
 
 % ─────────────────────────────────────────────────────────────
-\section{Architectural Overview}
+\section{System Architecture}
 \label{sec:design-overview}
 
 The ELTE IK Assistant is organised as a three-layer pipeline:
@@ -65,72 +65,21 @@ The strict separation between the offline and online pipelines is a deliberate c
 \section{Component Design}
 \label{sec:design-components}
 
-\subsection{Crawler}
-\label{subsec:design-crawler}
+\begin{itemize}
+    \item \textbf{Crawler:} performs a breadth-first traversal of the ELTE Faculty of Informatics website starting from a set of seed URLs. It downloads HTML pages, PDF documents, and DOCX files into \texttt{data/raw/}, computes a SHA-256 digest of each file, and records it in a manifest. On subsequent runs only files whose digest has changed are re-downloaded, keeping re-indexing time proportional to the volume of changed content. It feeds directly into the Ingestion component.
 
-The crawler performs a breadth-first traversal of the ELTE Faculty of Informatics website starting from a configurable set of seed URLs. It downloads HTML pages, linked PDF documents, and DOCX files, storing them verbatim in \texttt{data/raw/}. To support incremental updates without redundant downloads, the crawler computes a SHA-256 digest of every file at download time and records it in a manifest file (\texttt{data/processed/manifest.json}). On subsequent runs only files whose digest differs from the stored value are re-downloaded, and only the affected chunks are re-embedded. This design keeps re-indexing time proportional to the volume of changed content rather than to the total corpus size.
+    \item \textbf{Ingestion and Chunking:} receives raw files from the Crawler and applies format-specific loaders (PyMuPDF for PDFs, BeautifulSoup for HTML, python-docx for DOCX) to extract clean text. The text is split into overlapping 800-character chunks with a 150-character overlap using a recursive character splitter. Each chunk carries metadata (source path, file type, page number, chunk identifier) and is written to \texttt{data/processed/chunks.json} for the Embedding component.
 
-\subsection{Ingestion and Chunking}
-\label{subsec:design-ingest}
+    \item \textbf{Embedding Model and Vector Store:} the \texttt{all-MiniLM-L6-v2} sentence-transformer~\cite{reimers2019sbert} encodes each chunk into a 384-dimensional vector. The model occupies approximately 90~MB and runs entirely on CPU. Vectors are stored in a ChromaDB collection named \texttt{elte\_ik} using cosine similarity, persisted to \texttt{data/processed/chroma\_db/}. ChromaDB was selected because it runs in-process with no separate server and persists to a plain directory, satisfying the offline-operation requirement. The Vector Store is the boundary between the offline pipeline and the online serving layer.
 
-Raw documents arrive in three formats: HTML, PDF, and DOCX. A format-specific loader extracts plain text from each. HTML documents receive special treatment: navigation bars, footers, and script blocks are stripped before extraction, and each paragraph is prefixed with its nearest heading, so that the section context travels with the text when it is later split into chunks.
+    \item \textbf{RAG Module:} the core of the online pipeline. At query time it encodes the user's question with the same \texttt{all-MiniLM-L6-v2} model (mandatory — a model mismatch produces wrong retrieval results), retrieves the top-$k$ most similar chunks from ChromaDB by cosine similarity, assembles them into a grounded prompt that instructs the LLM to answer only from the provided context, and forwards the prompt to the Language Model. Both the ChromaDB client and the embedding model are initialised once at server startup as singletons, eliminating per-request load overhead.
 
-The cleaned text is then split into overlapping fixed-size chunks using a recursive character splitter with a chunk size of 800 characters and an overlap of 150 characters. The overlap prevents a sentence from being cut cleanly in half at a boundary, which would otherwise make both neighbouring chunks less useful for retrieval. Each chunk is stored as a JSON object carrying the text alongside metadata: source URL or file path, file type, page number (for PDFs), and a unique chunk identifier.
+    \item \textbf{FastAPI Backend:} exposes the RAG pipeline over HTTP. The \texttt{POST /chat} endpoint calls the RAG Module and logs the result; \texttt{GET /health} reports whether Ollama is reachable; additional endpoints handle session management and user-uploaded documents. Static files (the single-page UI) are served from \texttt{app/static/} via FastAPI's \texttt{StaticFiles} mount.
 
-\subsection{Embedding Model and Vector Store}
-\label{subsec:design-embedding}
+    \item \textbf{Chat Logging:} every request–response pair is persisted to a SQLite database (\texttt{data/logs/chat\_logs.db}). The schema records the session identifier, user message, assistant answer, source file list, response time, and timestamp. Logging supports both retrospective quality analysis and the session sidebar in the UI. SQLite was chosen because it requires no separate process and stores its data in a single portable file.
 
-Each chunk is encoded into a dense vector by the \texttt{all-MiniLM-L6-v2} sentence-transformer model~\cite{reimers2019sbert}. This model was chosen for three reasons: it fits within the 8~GB RAM budget (the model weights occupy approximately 90~MB), it produces 384-dimensional embeddings that balance retrieval quality against index size, and it runs entirely on CPU without requiring a GPU. The resulting 6112 embeddings are stored in a ChromaDB collection named \texttt{elte\_ik}.
-
-ChromaDB was selected as the vector store because it runs in-process as an embedded database with no separate server process, its index persists to disk as a standard directory, and it supports filtered metadata queries that can be used for future corpus versioning. The alternative of using FAISS would have required manual serialisation and a separate metadata store; Pinecone and Weaviate were eliminated immediately by the offline-operation requirement.
-
-\subsection{Retrieval-Augmented Generation Module}
-\label{subsec:design-rag}
-
-The RAG module is the core of the online pipeline. It encapsulates four operations that are always called together:
-
-\begin{enumerate}
-    \item \textbf{Encode query} — the user's question is embedded using the same \texttt{all-MiniLM-L6-v2} model used at index time, producing a 384-dimensional query vector. Using the same model for both indexing and querying is mandatory: a mismatch in embedding spaces makes retrieved chunks irrelevant.
-    \item \textbf{Retrieve chunks} — the query vector is compared against all stored chunk vectors using cosine similarity. The top-$k$ most similar chunks (default $k = 3$) are returned together with their metadata.
-    \item \textbf{Build prompt} — the retrieved chunks are concatenated into a context block and inserted into a structured prompt template. The template instructs the model to answer only from the provided context, to state when it does not know the answer, and to keep its response concise. This instruction pattern reduces hallucination and encourages on-topic refusals for out-of-scope questions.
-    \item \textbf{Call the language model} — the completed prompt is forwarded to Ollama's local REST API (\texttt{http://localhost:11434/api/generate}). The model generates its response token by token; the RAG module waits for the full completion and returns it together with the retrieved chunk metadata as source references.
-\end{enumerate}
-
-Both the ChromaDB client and the sentence-transformer model are initialised once at application startup and reused across requests (singleton pattern). This eliminates the per-request overhead of loading a 90~MB model and opening a database connection, which would otherwise dominate response latency.
-
-\subsection{FastAPI Backend}
-\label{subsec:design-api}
-
-The web server exposes a minimal REST API with three endpoints:
-
-\begin{table}[H]
-    \centering
-    \begin{tabular}{|l|l|p{0.5\textwidth}|}
-        \hline
-        \textbf{Method} & \textbf{Path} & \textbf{Purpose} \\
-        \hline\hline
-        \texttt{POST} & \texttt{/chat} & Accept a JSON body \texttt{\{session\_id, message\}}, call \texttt{rag\_query()}, log the interaction, return the answer and sources. \\
-        \hline
-        \texttt{GET}  & \texttt{/health} & Return the server status and whether Ollama is reachable. Used by the UI to show a connection warning. \\
-        \hline
-        \texttt{DELETE} & \texttt{/sessions/\{id\}} & Delete all chat log entries for a session, allowing the user to remove a conversation from the sidebar. \\
-        \hline
-    \end{tabular}
-    \caption{REST API surface of the ELTE IK Assistant backend.}
-    \label{tab:api-endpoints}
-\end{table}
-
-Static files (the single-page UI) are served from \texttt{app/static/} via FastAPI's \texttt{StaticFiles} mount, so no separate web server is needed.
-
-\subsection{Chat Logging}
-\label{subsec:design-logging}
-
-Every request–response pair is persisted to a SQLite database at \texttt{data/logs/chat\_logs.db}. The schema stores the session identifier, the user message, the assistant's answer, the list of retrieved source files, and a UTC timestamp. Logging serves two purposes: it enables retrospective analysis of what questions users asked and how well the system answered them, and it supports the session sidebar in the UI, which queries the log to list past conversations. SQLite was chosen over a full relational database server for the same reason as ChromaDB: it requires no separate process and stores its data in a single portable file.
-
-\subsection{Frontend}
-\label{subsec:design-frontend}
-
-The browser interface is a single self-contained HTML file with embedded CSS and vanilla JavaScript. Keeping the frontend framework-free was a deliberate choice: it eliminates a build step, reduces the number of moving parts the system administrator must maintain, and is sufficient for the conversational UI pattern (a message list, a text input, and a session sidebar). The UI communicates with the backend exclusively through the REST endpoints described above; it holds no local copy of the vector index or the language model.
+    \item \textbf{Frontend:} a single self-contained HTML file with embedded CSS and vanilla JavaScript served by the FastAPI backend. It communicates with the backend exclusively via REST and holds no local copy of the vector index or the language model. The framework-free design eliminates a build step and reduces operational complexity.
+\end{itemize}
 
 % ─────────────────────────────────────────────────────────────
 \section{Data Flow}
@@ -196,3 +145,6 @@ A near-zero temperature makes the language model near-deterministic and biased t
 
 \paragraph{Separation of offline and online pipelines.}
 The embedding pipeline is entirely offline and produces an artefact (the ChromaDB directory) that the serving layer consumes read-only. This means the serving layer starts instantly — there is no warm-up embedding step — and the administrator can rebuild the index without touching the running server. It also means the embedding model and the vector store are initialised once at server startup rather than on every request, which is essential for meeting the latency target.
+
+% ─────────────────────────────────────────────────────────────
+\input{samples_en/impl.tex}

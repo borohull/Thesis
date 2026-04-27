@@ -5,11 +5,12 @@
 	%twoside, % Double sided format
 	%draft, % Quicker draft compilation without rendering images
 	%final, % Set final to hide todos
-]{elteikthesis}[2024/04/26]
+]{elteikthesis}[2026/04/26]
 
 % The minted package is also supported for source highlighting
 % See elteikthesis_minted.tex for example
 %\usepackage[newfloat]{minted}
+\usetikzlibrary{shapes.geometric,positioning,arrows.meta}
 
 % Document's metadata
 \title{ELTE Informatics Chatbot Using a Small Language Model} % title
@@ -21,7 +22,7 @@
 
 % Superivsor(s)' metadata
 \supervisor{Altangerel Gereltsetseg} % internal supervisor's name
-\affiliation{Assistant Professor, PHD} % internal supervisor's affiliation
+\affiliation{Assistant Professor, Ph.D} % internal supervisor's affiliation
 %\extsupervisor{Jane Doe} % external supervisor's name
 %\extaffiliation{Senior Developer} % external supervisor's affiliation
 
@@ -58,22 +59,17 @@
 \input{samples_en/intro.tex}
 \cleardoublepage
 
-\input{samples_en/background.tex}
-\cleardoublepage
 
 \input{samples_en/requirements.tex}
+\cleardoublepage
+
+\input{samples_en/user.tex}
 \cleardoublepage
 
 \input{samples_en/design.tex}
 \cleardoublepage
 
-\input{samples_en/impl.tex}
-\cleardoublepage
-
 \input{samples_en/evaluation.tex}
-\cleardoublepage
-
-\input{samples_en/user.tex}
 \cleardoublepage
 
 \input{samples_en/sum.tex}

@@ -1,11 +1,112 @@
 % !TEX root = ../elteikthesis_en.tex
-\chapter{Implementation}
-\label{ch:impl}
+% !TEX root = ../elteikthesis_en.tex
+\section{Implementation}
+\label{sec:impl}
 
-This chapter describes the full implementation of the ELTE IK Assistant, a locally deployed chatbot for the Faculty of Informatics. The system is built in four major layers: data collection and ingestion, document embedding and vector storage, a Retrieval-Augmented Generation (RAG) backend, and a web-based frontend. Each section below covers one of these layers in detail, including the key design choices, data structures, and code that make the system work.
+This section describes the full implementation of the ELTE IK Assistant across its four layers: data collection and ingestion, document embedding and vector storage, the RAG backend, and the web-based frontend. Each subsection covers one layer in detail, including the key design choices, data structures, and code.
 
 % ─────────────────────────────────────────────────────────────
-\section{System Overview}
+\subsection{Setup and Deployment}
+\label{subsec:impl-setup}
+
+The application is designed to run on a single personal computer without a GPU.
+Table~\ref{tab:sys-req} lists the minimum system requirements.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ | m{0.28\textwidth} | m{0.62\textwidth} | }
+        \hline
+        \textbf{Component} & \textbf{Requirement} \\
+        \hline \hline
+        Operating system & Windows 10/11, macOS 12+, or Ubuntu 22.04+ \\
+        \hline
+        RAM & 8~GB (16~GB recommended) \\
+        \hline
+        Disk space & $\approx$6~GB (models + vector store + crawled data) \\
+        \hline
+        Python & 3.10 or newer \\
+        \hline
+        Ollama & Latest release (\url{https://ollama.com}) \\
+        \hline
+        Internet access & Required only during the initial setup phase \\
+        \hline
+    \end{tabular}
+    \caption{Minimum system requirements.}
+    \label{tab:sys-req}
+\end{table}
+
+\paragraph{Install Ollama.}
+Download and install Ollama from \url{https://ollama.com/download}, then start the background service and pull the two language models:
+
+\begin{lstlisting}[language=bash]
+ollama serve
+ollama pull llama3.2:3b
+ollama pull gemma3:4b
+\end{lstlisting}
+
+\paragraph{Clone the repository and create a virtual environment.}
+
+\begin{lstlisting}[language=bash]
+git clone https://github.com/borohull/Thesis.git
+cd Thesis/elte_chat
+python -m venv .venv
+# Windows:  .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+\end{lstlisting}
+
+\paragraph{Build the knowledge base.}
+This is a one-time process that must be completed before the server can answer questions.
+
+\begin{enumerate}
+    \item Run the crawler to download ELTE documents into \texttt{data/raw/}:
+\begin{lstlisting}[language=bash]
+python scripts/crawler.py
+\end{lstlisting}
+    \item Open JupyterLab and run \textbf{\texttt{notebooks/01\_data\_ingestion.ipynb}} — loads and chunks the raw files, writes \texttt{data/processed/chunks.json}.
+    \item Run \textbf{\texttt{notebooks/02\_embedding.ipynb}} — encodes chunks with \texttt{all-MiniLM-L6-v2} and stores vectors in ChromaDB under \texttt{data/processed/chroma\_db/}.
+\end{enumerate}
+
+All tunable parameters are defined in \texttt{app/settings.py}. The most commonly adjusted settings are shown in Table~\ref{tab:settings}.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ | m{0.3\textwidth} | m{0.18\textwidth} | m{0.42\textwidth} | }
+        \hline
+        \textbf{Setting} & \textbf{Default} & \textbf{Description} \\
+        \hline \hline
+        \texttt{OLLAMA\_MODEL} & \texttt{llama3.2:3b} & Default language model \\
+        \hline
+        \texttt{TOP\_K} & \texttt{3} & Chunks retrieved per query \\
+        \hline
+        \texttt{TEMPERATURE} & \texttt{0.1} & LLM sampling temperature \\
+        \hline
+        \texttt{EMBEDDING\_MODEL} & \texttt{all-MiniLM-L6-v2} & Must match notebook~02 \\
+        \hline
+    \end{tabular}
+    \caption{Key configuration parameters in \texttt{app/settings.py}.}
+    \label{tab:settings}
+\end{table}
+
+\noindent\textbf{Important:} \texttt{EMBEDDING\_MODEL} must not be changed after notebook~02 has been run. A mismatch between the query encoder and the stored index produces incorrect retrieval results.
+
+\paragraph{Start the server.}
+Run the following command from the project root with the virtual environment active and Ollama running:
+
+\begin{lstlisting}[language=bash]
+uvicorn app.main:app --reload
+\end{lstlisting}
+
+The server starts on \texttt{http://localhost:8000}. Verify it is healthy with:
+
+\begin{lstlisting}[language=bash]
+curl http://localhost:8000/health
+\end{lstlisting}
+
+A successful response is \texttt{\{"status": "ok", "ollama": true\}}. If \texttt{"ollama": false} appears, Ollama is not running or the selected model has not been pulled.
+
+% ─────────────────────────────────────────────────────────────
+\subsection{System Overview}
 \label{sec:impl-overview}
 
 The application follows a clean pipeline architecture in which each stage feeds its output directly into the next. A user types a question into the browser-based chat interface. The FastAPI backend receives this message and passes it to the retrieval module, which queries a ChromaDB vector database to find the most relevant text chunks from the ELTE documents. Those chunks are assembled into a prompt, which is forwarded to a locally running Llama~3.2 (3B) model served by Ollama. The model generates an answer that is returned to the user together with references to the source documents.
@@ -35,12 +136,12 @@ TIMEOUT_S       = 120
 The low temperature value (0.1) is deliberate: the chatbot is expected to give factual, consistent answers from official faculty documents rather than creative or varied responses.
 
 % ─────────────────────────────────────────────────────────────
-\section{Data Collection and Ingestion}
+\subsection{Data Collection and Ingestion}
 \label{sec:impl-data}
 
 Before any machine learning component can be applied, the raw source material must be collected and converted into a uniform text format. ELTE Faculty of Informatics publishes its relevant information across several channels: static HTML pages, downloadable PDF documents (study regulations, course descriptions, exam rules), and plain-text files. The ingestion pipeline handles all three formats through a unified loader interface.
 
-\subsection{File Loaders}
+\subsubsection{File Loaders}
 
 Each file type requires a different parsing strategy. PDFs are loaded using PyMuPDF (\texttt{pymupdf}), which extracts text page by page with reliable layout handling. HTML files are parsed with \texttt{BeautifulSoup}: structural noise tags (\texttt{script}, \texttt{style}, \texttt{nav}, \texttt{footer}, \texttt{header}, \texttt{aside}) are removed first, then content is extracted from the \texttt{<main>} or \texttt{<article>} element if present, with each paragraph prefixed by its nearest heading to preserve section context. DOCX files are parsed with \texttt{python-docx}, which extracts paragraphs and tables while tracking heading structure. Plain text and Markdown files are read directly. In every case the resulting text goes through a shared cleaning function that collapses runs of blank lines and normalises whitespace.
 
@@ -68,7 +169,7 @@ def load_file(file_path: str | Path) -> List[Document]:
 
 Every document is represented as a LangChain \texttt{Document} object carrying both its text content and a metadata dictionary that records the original file name, file type, page number (for PDFs), and a \texttt{source\_relative} path used by the incremental update pipeline. This metadata is preserved all the way into the vector database and is later surfaced to the user as source references.
 
-\subsection{Web Crawler}
+\subsubsection{Web Crawler}
 
 Raw documents are collected by a standalone crawler (\texttt{scripts/crawler.py}) that performs a resumable breadth-first crawl across two domains. It crawls all English pages under \texttt{inf.elte.hu} recursively, and twenty whitelisted path subtrees on \texttt{www.elte.hu} covering topics such as Neptun registration, visa procedures, student finances, and dormitory housing. Staying within explicit path prefixes on the second domain prevents the crawler from wandering into unrelated university-wide content.
 
@@ -105,7 +206,7 @@ The crawler traverses the web graph using Breadth-First Search (BFS), implemente
 \end{algorithmic}
 \end{algorithm}
 
-\subsection{Chunking Strategy}
+\subsubsection{Chunking Strategy}
 
 Large documents cannot be stored or retrieved as single units: a language model has a limited context window, and retrieving a full 50-page PDF in response to a one-sentence question would waste context and degrade answer quality. The documents are therefore split into overlapping chunks using \texttt{RecursiveCharacterTextSplitter} from LangChain.
 
@@ -123,7 +224,7 @@ A chunk size of 800 characters was chosen as a practical balance: large enough t
 
 Chunks shorter than 100 characters (for example lone headers or page numbers) are discarded, and each surviving chunk is assigned a \texttt{chunk\_id} of the form \texttt{<source\_relative>::chunk\_N} before being saved to a JSON file for the next stage.
 
-\subsection{Incremental Ingestion with SHA-256 Manifest}
+\subsubsection{Incremental Ingestion with SHA-256 Manifest}
 
 Re-processing all 482 source files from scratch every time a document is updated would be wasteful. The pipeline therefore maintains a \emph{manifest} — a JSON file at \texttt{data/processed/manifest.json} — that records the SHA-256 content hash, chunk count, and last-processed timestamp for every file that has been ingested.
 
@@ -142,12 +243,12 @@ updated_files = sorted(
 After chunking, the results of the diff are saved to \texttt{data/processed/pending\_changes.json}. Notebook \texttt{02\_embedding.ipynb} reads this file to know exactly which chunk IDs to remove from ChromaDB and which new embeddings to insert, avoiding a full re-embed of the collection. Once notebook 02 completes it deletes the pending changes file so that the next run starts clean.
 
 % ─────────────────────────────────────────────────────────────
-\section{Embedding and Vector Storage}
+\subsection{Embedding and Vector Storage}
 \label{sec:impl-embedding}
 
 With the text broken into chunks, the next step is to convert each chunk into a dense numeric vector (an \emph{embedding}) that captures its semantic meaning. Chunks with similar meaning will have embeddings that are close to each other in vector space, which allows the retrieval step to find relevant content even when the user's phrasing differs from the exact wording in the source document.
 
-\subsection{Embedding Model}
+\subsubsection{Embedding Model}
 
 The chosen model is \texttt{all-MiniLM-L6-v2}, a compact sentence transformer from the Sentence-Transformers library. It produces 384-dimensional vectors and runs efficiently on CPU, which is important for local deployment without a dedicated GPU. Although larger embedding models exist, this model offers a very good accuracy-to-resource trade-off for English factual retrieval tasks.
 
@@ -163,7 +264,7 @@ class EmbeddingPipeline:
 
 All chunk texts are encoded in a single batched call, producing a matrix of shape \texttt{(num\_chunks, 384)}. The same model instance is reused at query time inside the production application to ensure that document and query embeddings live in the same vector space.
 
-\subsection{ChromaDB Vector Store}
+\subsubsection{ChromaDB Vector Store}
 
 The embeddings, original texts, and metadata are stored in ChromaDB, an open-source vector database that persists data to disk and supports fast approximate nearest-neighbour search. A single persistent collection named \texttt{elte\_ik} is created with cosine similarity as the distance metric, which is standard for sentence embeddings.
 
@@ -186,12 +287,12 @@ collection.upsert(
 Using \texttt{upsert} rather than \texttt{add} means that re-running the embedding notebook after new documents have been scraped will update existing chunks in place rather than creating duplicates. The collection is stored under \texttt{data/processed/chroma\_db/} and is read at runtime by the production RAG module without any re-processing.
 
 % ─────────────────────────────────────────────────────────────
-\section{Retrieval-Augmented Generation Pipeline}
+\subsection{Retrieval-Augmented Generation Pipeline}
 \label{sec:impl-rag}
 
 The RAG pipeline is the core intelligence of the system. It consists of three steps that run on every incoming user query: retrieval, prompt construction, and LLM generation.
 
-\subsection{Retrieval}
+\subsubsection{Retrieval}
 
 When a user submits a question, the embedding model encodes it into a 384-dimensional query vector. ChromaDB then returns the \texttt{TOP\_K} (default: 3) chunks whose stored embeddings are most similar to the query vector under cosine similarity.
 
@@ -232,7 +333,7 @@ def retrieve(query: str, n_results: int = TOP_K) -> list[dict]:
 
 The ChromaDB client and the SentenceTransformer model are initialised eagerly at module import time as module-level singletons. This means the model is loaded from disk once when the FastAPI process starts, and every subsequent request reuses the already-loaded objects, keeping per-query latency low.
 
-\subsection{Prompt Construction}
+\subsubsection{Prompt Construction}
 
 The retrieved chunks are assembled into a structured prompt that instructs the LLM to answer only from the provided context and to admit when the answer is not available. Each chunk is labelled with its source file name so the model can associate claims with documents.
 
@@ -254,7 +355,7 @@ def build_prompt(query: str, chunks: list[dict]) -> str:
 
 The explicit instruction \emph{``If the answer is not in the context, say so''} is important for a faculty assistant: it is better to acknowledge a gap in the indexed documents than to hallucinate a regulation or deadline.
 
-\subsection{Local LLM via Ollama}
+\subsubsection{Local LLM via Ollama}
 
 Answers are generated by a locally running language model served through Ollama. The default model is \texttt{llama3.2:3b} (3 billion parameters), but the system supports runtime model switching: the frontend exposes a model selector that queries the \texttt{GET /models} endpoint for the list of models currently available in the local Ollama installation, and the selected model name is passed with each chat request. During evaluation an additional model, \texttt{gemma3:4b}, was also tested. Ollama exposes a simple HTTP API, meaning the production code does not depend on any cloud service or API key. The model runs on the same machine as the application, which preserves user privacy and eliminates per-query costs.
 
@@ -292,7 +393,7 @@ def call_ollama(prompt: str, model: str = OLLAMA_MODEL) -> str:
 
 The context window is set to 2048 tokens, which comfortably fits three retrieved chunks plus the prompt template and leaves room for the generated answer. A \texttt{check\_ollama()} health probe is called before every generation request. The \texttt{try}/\texttt{except} block distinguishes three failure modes: a timeout (model still loading), an HTTP error code (model not pulled), and a malformed response body — each producing a descriptive \texttt{RuntimeError} that the API layer converts into a 503 response.
 
-\subsection{End-to-End Query Function}
+\subsubsection{End-to-End Query Function}
 
 The three steps are composed into a single \texttt{rag\_query} function that is called by the API layer:
 
@@ -317,7 +418,7 @@ def rag_query(query: str) -> dict:
 The function returns both the answer text and a list of source references. This allows the frontend to display which documents were used, giving the user a way to verify the answer or read further.
 
 % ─────────────────────────────────────────────────────────────
-\section{FastAPI Backend}
+\subsection{FastAPI Backend}
 \label{sec:impl-backend}
 
 The backend is a FastAPI application (\texttt{app/main.py}) that exposes three HTTP endpoints and serves the static frontend files.
@@ -365,7 +466,7 @@ def chat(req: ChatRequest):
 If \texttt{rag\_query} raises a \texttt{RuntimeError} (for example because Ollama is not running or timed out), the endpoint converts it into an HTTP 503 response so the frontend can display a meaningful error rather than a timeout spinner. CORS middleware is enabled to allow the frontend to communicate with the backend. For a locally deployed application this is straightforward, but in a production web deployment the allowed origins would need to be restricted to a specific domain.
 
 % ─────────────────────────────────────────────────────────────
-\section{Logging System}
+\subsection{Logging System}
 \label{sec:impl-logging}
 
 Every chat interaction is recorded in a SQLite database at \texttt{data/logs/chat\_logs.db}. The schema captures the timestamp, the user's message, the generated answer, the source references (as a JSON array), the response time in milliseconds, and any error message.
@@ -410,7 +511,7 @@ The \texttt{chat\_logs} table links each message to a \texttt{session\_id}, enab
 SQLite was chosen because the application runs on a single machine, the log volume is modest, and SQLite requires no separate database server process.
 
 % ─────────────────────────────────────────────────────────────
-\section{Frontend}
+\subsection{Frontend}
 \label{sec:impl-frontend}
 
 The user interface is a single-page HTML application served as a static file by FastAPI. It uses vanilla JavaScript without any framework dependency, which keeps the bundle small and removes the need for a separate build step.
@@ -422,7 +523,7 @@ When the user sends a message, the frontend posts a JSON request to \texttt{/cha
 A status indicator in the header reflects the current Ollama availability by polling the \texttt{/health} endpoint on page load. This gives the user immediate feedback if the local model is not running before they attempt their first query.
 
 % ─────────────────────────────────────────────────────────────
-\section{Project Structure}
+\subsection{Project Structure}
 \label{sec:impl-structure}
 
 The repository is organised into clearly separated concerns, as summarised in Table~\ref{tab:structure}.

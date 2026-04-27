@@ -1,264 +1,244 @@
 % !TEX root = ../elteikthesis_en.tex
-
 \chapter{User Documentation}
 \label{ch:user}
 
-This chapter describes how to install, configure, and use the ELTE Informatics Chatbot.
-The system consists of a one-time data pipeline that builds the knowledge base, and a
-FastAPI server that answers questions through a browser-based interface or a command-line
-client.
-
+This chapter describes how to set up and use the ELTE IK Assistant.
+Two setup paths are provided: a Docker-based zero-configuration path (recommended)
+and a manual path for users who prefer to manage dependencies directly.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section{System Requirements}
-\label{sec:user-requirements}
+\section{Overview}
+\label{sec:user-overview}
 
-The application is designed to run on a single personal computer without a GPU.
-Table~\ref{tab:sys-req} lists the minimum requirements.
-
-\begin{table}[H]
-    \centering
-    \begin{tabular}{ | m{0.28\textwidth} | m{0.62\textwidth} | }
-        \hline
-        \textbf{Component} & \textbf{Requirement} \\
-        \hline \hline
-        Operating system & Windows 10/11, macOS 12+, or Ubuntu 22.04+ \\
-        \hline
-        RAM & 8~GB (16~GB recommended) \\
-        \hline
-        Disk space & $\approx$6~GB (models + vector store + crawled data) \\
-        \hline
-        Python & 3.10 or newer \\
-        \hline
-        Ollama & Latest release (\url{https://ollama.com}) \\
-        \hline
-        Internet access & Required only during the initial setup phase \\
-        \hline
-    \end{tabular}
-    \caption{Minimum system requirements}
-    \label{tab:sys-req}
-\end{table}
-
+The ELTE IK Assistant answers student and staff questions about the Faculty of
+Informatics — curriculum requirements, exam rules, registration procedures, and
+similar administrative topics — by retrieving relevant passages from an indexed
+document corpus and grounding its answers in that content.
+The system provides two interaction modes: a browser-based chat interface and a
+lightweight command-line client.
+When a question falls outside the scope of the indexed documents, the assistant
+says so explicitly rather than generating an unsupported response.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section{Installation}
+\section{Installation and Configuration}
 \label{sec:user-install}
 
-\subsection{Install Ollama}
+\subsection*{Option A — Docker (recommended)}
 
-Download and install Ollama from \url{https://ollama.com/download} for your operating
-system. After installation, start the Ollama background service:
+Docker Compose orchestrates all services automatically: the Ollama language model
+server, the model download, and the FastAPI application.
 
+\begin{enumerate}
+    \item Install \textbf{Docker Desktop} (includes Docker Compose) from the official
+          Docker website for your operating system.
+
+    \item Clone or download the project repository:
 \begin{lstlisting}[language=bash]
-ollama serve
+git clone https://github.com/borohull/elte_chat.git
+cd elte_chat
 \end{lstlisting}
 
-Pull the two language models used in the system:
+    \item Start all services with a single command:
+\begin{lstlisting}[language=bash]
+docker compose up -d
+\end{lstlisting}
 
+    Docker will build the application image, start the Ollama service, and
+    automatically pull the \texttt{llama3.2:3b} model on first run.
+    This step requires an internet connection and may take several minutes
+    depending on download speed.
+
+    \item Once all containers are healthy, open the chat interface at
+          \texttt{http://localhost:8000/static/index.html}.
+
+    \item To stop and remove the containers:
+\begin{lstlisting}[language=bash]
+docker compose down
+\end{lstlisting}
+\end{enumerate}
+
+\subsection*{Option B — Manual Setup}
+
+\begin{enumerate}
+    \item Install \textbf{Ollama} from \texttt{ollama.com} and pull the model:
 \begin{lstlisting}[language=bash]
 ollama pull llama3.2:3b
-ollama pull gemma3:4b
 \end{lstlisting}
 
-\subsection{Clone the Repository and Create a Virtual Environment}
-
+    \item Create and activate a Python virtual environment, then install dependencies:
 \begin{lstlisting}[language=bash]
-git clone https://github.com/borohull/Thesis.git
-cd Thesis/elte_chat
 python -m venv .venv
-\end{lstlisting}
-
-Activate the virtual environment:
-
-\begin{compactitem}
-    \item \textbf{Windows:} \texttt{.venv\textbackslash Scripts\textbackslash activate}
-    \item \textbf{macOS / Linux:} \texttt{source .venv/bin/activate}
-\end{compactitem}
-
-\bigskip
-Install the Python dependencies:
-
-\begin{lstlisting}[language=bash]
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 \end{lstlisting}
 
-
-% ─────────────────────────────────────────────────────────────────────────────
-\section{Building the Knowledge Base}
-\label{sec:user-pipeline}
-
-Before the chatbot can answer questions, the knowledge base must be built.
-This is a one-time process consisting of three steps.
-
-\subsection{Step 1 — Crawl the ELTE Websites}
-
-The crawler downloads HTML pages and PDF documents from the ELTE Faculty of Informatics
-website and saves them to \texttt{data/raw/}:
-
-\begin{lstlisting}[language=bash]
-python scripts/crawler.py
-\end{lstlisting}
-
-To start fresh and discard previously downloaded files, pass the \texttt{-{}-reset} flag:
-
-\begin{lstlisting}[language=bash]
-python scripts/crawler.py --reset
-\end{lstlisting}
-
-The crawler performs a breadth-first traversal starting from the faculty homepage.
-Downloaded files are tracked in a manifest so that subsequent runs only fetch new or
-changed documents.
-
-\subsection{Step 2 — Chunk and Embed Documents}
-
-Open JupyterLab or Jupyter Notebook and run the following notebooks in order:
-
-\begin{enumerate}
-    \item \textbf{\texttt{notebooks/01\_data\_ingestion.ipynb}} — loads the raw files,
-          splits them into overlapping text chunks, and writes the result to
-          \texttt{data/processed/chunks.json}.
-    \item \textbf{\texttt{notebooks/02\_embedding.ipynb}} — encodes each chunk with the
-          \texttt{all-MiniLM-L6-v2} sentence-transformer model and stores the resulting
-          vectors in the ChromaDB collection \texttt{elte\_ik} under
-          \texttt{data/processed/chroma\_db/}.
-\end{enumerate}
-
-Both notebooks must be run to completion before starting the API server.
-Running notebook~02 on a CPU with several thousand chunks typically takes a few minutes.
-
-\subsection{Configuration}
-
-All tunable parameters are defined in \texttt{app/settings.py}.
-The most commonly adjusted settings are listed in Table~\ref{tab:settings}.
-
-\begin{table}[H]
-    \centering
-    \begin{tabular}{ | m{0.3\textwidth} | m{0.18\textwidth} | m{0.42\textwidth} | }
-        \hline
-        \textbf{Setting} & \textbf{Default} & \textbf{Description} \\
-        \hline \hline
-        \texttt{OLLAMA\_MODEL} & \texttt{llama3.2:3b} & Default language model \\
-        \hline
-        \texttt{TOP\_K} & \texttt{5} & Chunks retrieved per query \\
-        \hline
-        \texttt{TEMPERATURE} & \texttt{0.1} & LLM sampling temperature \\
-        \hline
-        \texttt{EMBEDDING\_MODEL} & \texttt{all-MiniLM-L6-v2} & Must match notebook~02 \\
-        \hline
-    \end{tabular}
-    \caption{Key configuration parameters in \texttt{app/settings.py}}
-    \label{tab:settings}
-\end{table}
-
-\noindent\textbf{Important:} \texttt{EMBEDDING\_MODEL} must not be changed after
-notebook~02 has been run. The query encoder and the document index must use the same
-model; a mismatch produces incorrect retrieval results.
-
-
-% ─────────────────────────────────────────────────────────────────────────────
-\section{Starting the Server}
-\label{sec:user-server}
-
-Run the following command from the project root (with the virtual environment active and
-Ollama running):
-
+    \item Start the API server from the repository root:
 \begin{lstlisting}[language=bash]
 uvicorn app.main:app --reload
 \end{lstlisting}
 
-The server starts on \texttt{http://localhost:8000}.
-The \texttt{--reload} flag restarts the server automatically when source files change;
-omit it in production.
+    \item Open the chat interface at \texttt{http://localhost:8000/static/index.html}.
+\end{enumerate}
 
-To verify the server is healthy and Ollama is reachable, open a browser or run:
+\subsection*{Configuration}
 
-\begin{lstlisting}[language=bash]
-curl http://localhost:8000/health
-\end{lstlisting}
+All tunable parameters are defined in \texttt{app/settings.py}.
+The most commonly adjusted values are listed in Table~\ref{tab:settings}.
 
-A successful response looks like:
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\hline
+\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+\hline
+\texttt{OLLAMA\_MODEL}    & \texttt{llama3.2:3b}      & Language model served by Ollama \\
+\texttt{EMBEDDING\_MODEL} & \texttt{all-MiniLM-L6-v2} & Sentence embedding model \\
+\texttt{TOP\_K}           & \texttt{3}                & Chunks retrieved per query \\
+\texttt{TEMPERATURE}      & \texttt{0.1}              & Generation temperature \\
+\texttt{CHROMA\_PATH}     & \texttt{data/processed/chroma\_db} & Vector store location \\
+\hline
+\end{tabular}
+\caption{Key configuration parameters in \texttt{app/settings.py}}
+\label{tab:settings}
+\end{table}
 
-\begin{lstlisting}
-{"status": "ok", "ollama": true}
-\end{lstlisting}
-
-If \texttt{"ollama": false} appears, Ollama is not running or the selected model has
-not been pulled.
-
+Changing \texttt{OLLAMA\_MODEL} takes effect on the next server start.
+Changing \texttt{EMBEDDING\_MODEL} additionally requires rebuilding the vector
+store by re-running notebook \texttt{02\_embedding.ipynb}.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Using the Web Interface}
 \label{sec:user-web}
 
-Open \texttt{http://localhost:8000/static/index.html} in any modern browser.
-The interface consists of three areas: a left sidebar for chat history, a central chat
-panel, and a right sidebar for model selection.
+Open \texttt{http://localhost:8000/static/index.html} in any modern browser once
+the server is running. The interface consists of a left sidebar listing chat
+sessions, a central chat panel, and a right sidebar for model selection.
 
-\subsection{Asking a Question}
-
+\paragraph{Asking a question.}
 Type a question in the input field at the bottom of the chat panel and press
-\textbf{Enter} or click the send button. The assistant retrieves the most relevant
-document chunks from the knowledge base, constructs a prompt, and returns an answer.
+\textbf{Enter} or click the send button. The assistant retrieves relevant document
+chunks, constructs a grounded prompt, and returns an answer with source references.
+Questions should relate to the ELTE Faculty of Informatics.
 
-Questions should relate to the ELTE Faculty of Informatics — for example:
+\paragraph{Selecting a language model.}
+The right sidebar lists all Ollama models available on the machine. Click a model
+name to switch for the current session. On a CPU-only machine with 8~GB of RAM,
+typical response times are 30--80~seconds per query.
 
-\begin{compactitem}
-    \item \emph{What is a strong prerequisite?}
-    \item \emph{Who is the Dean of the Faculty of Informatics?}
-    \item \emph{Can I take a follow-up subject before completing its prerequisite?}
-\end{compactitem}
+\paragraph{Managing chat sessions.}
+Each conversation is stored as a named session. Sessions appear in the left sidebar
+and persist across browser refreshes. Click \textbf{New chat} to start a new
+conversation, or hover over an existing session and click the \texttimes\ button
+to delete it.
 
-For questions outside the scope of the knowledge base, the system responds that the
-information is not available in its context rather than fabricating an answer.
-
-\subsection{Selecting a Language Model}
-
-The right sidebar lists all Ollama models currently available on the machine.
-Click a model name to switch to it for the current session.
-The default model is \texttt{llama3.2:3b}; \texttt{gemma3:4b} is also available after
-running \texttt{ollama pull gemma3:4b}.
-
-Response latency depends on model size and hardware. On a CPU-only machine with 8~GB
-of RAM, typical response times are 30--80~seconds per query.
-
-\subsection{Managing Chat Sessions}
-
-Each conversation is stored as a named session. Sessions appear in the left sidebar and
-persist across browser refreshes. To start a new conversation, click \textbf{New chat}.
-To delete a session, hover over its entry in the sidebar and click the
-\texttimes\ button that appears.
-
-\subsection{Uploading Custom Documents}
-
-In addition to the crawled ELTE content, users can upload their own PDF, HTML, or DOCX
-files to extend the knowledge base. Click the \textbf{Upload document} button above the
-input field, select a file (maximum 20~MB), and wait for the confirmation message.
-Uploaded documents are chunked, embedded, and added to the vector store immediately;
-they are available for retrieval in the same session without restarting the server.
-
+\paragraph{Uploading custom documents.}
+Users can extend the knowledge base with their own PDF, HTML, or DOCX files.
+Click \textbf{Upload document} above the input field, select a file (maximum
+20~MB), and wait for the confirmation message. Uploaded documents are chunked,
+embedded, and available for retrieval immediately without restarting the server.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Using the Command-Line Client}
 \label{sec:user-cli}
 
 A lightweight CLI client is provided for scripting and testing without a browser.
-The FastAPI server must be running before the client is started:
+The FastAPI server must be running before starting the client:
 
 \begin{lstlisting}[language=bash]
 python scripts/chat_cli.py
 \end{lstlisting}
 
-Type a question at the \texttt{>} prompt and press Enter. The client sends the question
-to the server and prints the answer together with the source references.
-Type \texttt{exit} or press \texttt{Ctrl+C} to quit.
-
+Type a question at the \texttt{You:} prompt and press Enter. The client sends the
+question to the server and prints the answer. Type \texttt{exit} or press
+\texttt{Ctrl+C} to quit.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section{Interaction Logs}
-\label{sec:user-logs}
+\section{Use Case Diagram}
+\label{sec:user-usecase}
 
-Every question and answer is automatically recorded in a SQLite database at
-\texttt{data/logs/chat\_logs.db}. Each row stores the timestamp, the user's message,
-the generated answer, the retrieved source references, the end-to-end response time in
-milliseconds, and any error that occurred. Logs can be inspected with any SQLite viewer
-or via the optional cell in \texttt{notebooks/04\_evaluation.ipynb}.
+Figure~\ref{fig:usecase} shows the primary interactions between users and the system.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+    actor/.style={draw, circle, minimum size=0.6cm, inner sep=0pt},
+    usecase/.style={draw, ellipse, align=center, minimum width=3.2cm,
+                    minimum height=0.9cm, font=\small},
+    every edge/.style={draw, -}
+]
+
+% Actor
+\node[actor] (actor) at (0,0) {};
+\node[below=0.05cm of actor, font=\small, align=center] {Student /\\ Staff};
+% Stick figure legs and arms (manual lines)
+\draw (actor.south) -- ++(0,-0.4);
+\draw (actor.south) ++(0,-0.4) -- ++(-0.2,-0.3);
+\draw (actor.south) ++(0,-0.4) -- ++(0.2,-0.3);
+\draw (actor.west)  -- ++(-0.25,-0.2);
+\draw (actor.east)  -- ++(0.25,-0.2);
+
+% System boundary
+\draw[rounded corners] (2.0,-3.2) rectangle (9.2, 2.0);
+\node[above, font=\small\bfseries] at (5.6, 2.0) {ELTE IK Assistant};
+
+% Use cases
+\node[usecase] (uc1) at (5.6,  1.2) {Ask a question};
+\node[usecase] (uc2) at (5.6,  0.1) {View answer\\ with sources};
+\node[usecase] (uc3) at (5.6, -1.0) {Upload document};
+\node[usecase] (uc4) at (5.6, -2.1) {Select language model};
+
+% Actor connections
+\draw (actor) -- (uc1);
+\draw (actor) -- (uc2);
+\draw (actor) -- (uc3);
+\draw (actor) -- (uc4);
+
+% Include relation: ask invokes view
+\draw[dashed, ->] (uc1) -- node[right, font=\scriptsize] {$\langle\langle$includes$\rangle\rangle$} (uc2);
+
+\end{tikzpicture}
+\caption{Use case diagram for the ELTE IK Assistant}
+\label{fig:usecase}
+\end{figure}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{Example Queries}
+\label{sec:user-examples}
+
+The following examples illustrate the range of questions the system handles.
+
+\paragraph{Example 1 — Prerequisite query.}
+\textit{Question:} ``What is a strong prerequisite and how does it differ from a weak one?''
+
+\textit{Answer:} A strong prerequisite must be passed before a student may register
+for the follow-up course. A weak prerequisite allows registration before the
+prerequisite is passed, though it is still required for graduation.
+
+\textit{Sources:} \texttt{The\_prerequisites.pdf}
+
+\paragraph{Example 2 — Exam rules.}
+\textit{Question:} ``How many times can I retake a failed exam in one semester?''
+
+\textit{Answer:} A student may attempt an exam up to three times per exam period.
+If all three attempts are failed, the course must be re-registered in a subsequent
+semester.
+
+\textit{Sources:} \texttt{elte\_ik\_regulations.html}
+
+\paragraph{Example 3 — Registration procedure.}
+\textit{Question:} ``When does course registration open for the spring semester?''
+
+\textit{Answer:} Course registration for the spring semester typically opens in the
+last week of January through the Neptun system. Exact dates are published each year
+in the faculty academic calendar.
+
+\textit{Sources:} \texttt{academic\_calendar.html}
+
+\paragraph{Example 4 — Out-of-scope query.}
+\textit{Question:} ``What is the capital city of Australia?''
+
+\textit{Answer:} The information needed to answer this question is not available in
+the documents I have access to. I can only answer questions related to the ELTE
+Faculty of Informatics curriculum, regulations, and procedures.
+
+\textit{Sources:} (none)
