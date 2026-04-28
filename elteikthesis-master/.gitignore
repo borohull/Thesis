@@ -1,6 +1,4 @@
 # Compiled output
-*.pdf
-!README.pdf
 !images/*.pdf
 
 *.aux
