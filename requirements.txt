@@ -16,3 +16,8 @@ httpx
 beautifulsoup4
 python-docx
 python-multipart
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov

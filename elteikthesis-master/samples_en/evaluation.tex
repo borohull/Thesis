@@ -8,7 +8,70 @@ This chapter covers testing and evaluation of the ELTE IK Assistant. It begins w
 \section{Functional Testing}
 \label{sec:testing-functional}
 
+The project includes an end-to-end test suite located in the \texttt{tests/} directory. Tests are written using \texttt{pytest} and interact with the live system over HTTP — there are no mocks — so they exercise the full request path from the API layer through ChromaDB retrieval to Ollama inference.
 
+\subsection*{Test Architecture}
+
+All tests are tagged with the \texttt{@pytest.mark.e2e} marker, which keeps them separate from any future unit tests and allows selective execution. A session-scoped \texttt{warm\_up\_model} fixture fires one dummy \texttt{/chat} request before the first test runs, loading the LLM into RAM so that individual tests do not time out during model initialisation. Two further session-scoped fixtures --- \texttt{live\_server} and \texttt{ollama\_up} --- check the \texttt{/health} endpoint and skip the entire session with an actionable message if the server or Ollama is not reachable.
+
+\subsection*{Coverage}
+
+Table~\ref{tab:e2e-tests} summarises the endpoints and behaviours verified by the suite.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|p{0.42\textwidth}|}
+        \hline
+        \textbf{Endpoint} & \textbf{Test} & \textbf{Assertion} \\
+        \hline \hline
+        \texttt{GET /health}   & server up         & \texttt{status == "ok"}, \texttt{ollama} key present \\
+        \hline
+        \texttt{GET /health}   & Ollama online     & \texttt{ollama == true} \\
+        \hline
+        \texttt{POST /chat}    & basic response    & 200, non-empty answer, sources list, \texttt{response\_ms > 0} \\
+        \hline
+        \texttt{POST /chat}    & in-scope query    & answer length $> 20$ characters \\
+        \hline
+        \texttt{POST /chat}    & out-of-scope query & 200, non-empty answer \\
+        \hline
+        \texttt{POST /chat}    & source keys       & each source contains \texttt{chunk\_id} and \texttt{file} \\
+        \hline
+        \texttt{POST /chat}    & session logging   & session appears in \texttt{GET /sessions} after chat \\
+        \hline
+        \texttt{GET /sessions} & session created   & session ID present after chat with \texttt{session\_id} \\
+        \hline
+        \texttt{GET /sessions/\{id\}/messages} & messages retrievable & one message with correct \texttt{user\_message} field \\
+        \hline
+        \texttt{DELETE /sessions/\{id\}} & session delete & 204, session absent from list afterwards \\
+        \hline
+        \texttt{POST /upload}  & valid PDF         & 200, \texttt{status} is \texttt{"indexed"} or \texttt{"already\_indexed"} \\
+        \hline
+        \texttt{POST /upload}  & duplicate file    & \texttt{status == "already\_indexed"} on second upload \\
+        \hline
+        \texttt{POST /upload}  & invalid extension & 415 Unsupported Media Type \\
+        \hline
+        \texttt{GET /info}     & collection size   & \texttt{total\_chunks} is a non-negative integer \\
+        \hline
+        \texttt{GET /info}     & embedding model   & \texttt{embedding\_model == "all-MiniLM-L6-v2"} \\
+        \hline
+        \texttt{GET /models}   & model list        & \texttt{models} is a non-empty list, \texttt{default} key present \\
+        \hline
+    \end{tabular}
+    \caption{End-to-end test cases and their assertions.}
+    \label{tab:e2e-tests}
+\end{table}
+
+Because LLM output is non-deterministic, no test asserts exact answer text; all assertions target response structure, status codes, and field types.
+
+\subsection*{Running the Tests}
+
+Before running the suite the following prerequisites must be met: Ollama must be running (\texttt{ollama serve}), the target model must be pulled (\texttt{ollama pull llama3.2:3b}), and the FastAPI server must be started (\texttt{uvicorn app.main:app -{}-reload}). The suite is then executed with:
+
+\begin{lstlisting}[language=bash]
+python -m pytest tests/e2e/ -m e2e -v --no-cov
+\end{lstlisting}
+
+If the server or Ollama is not available, all tests are automatically skipped rather than failed, and the skip message states the exact command needed to resolve the issue.
 
 % ─────────────────────────────────────────────────────────────
 \section{User Evaluation}
