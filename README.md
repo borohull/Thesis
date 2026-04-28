@@ -5,7 +5,7 @@ A local, privacy-preserving RAG (Retrieval-Augmented Generation) chatbot for the
 ## Features
 
 - **Fully local** — no external API calls; all inference and retrieval happen on your machine.
-- **RAG pipeline** — retrieves the top-K relevant chunks from ChromaDB and grounds the LLM answer in cited sources.
+- **RAG pipeline** — retrieves the top-3 relevant chunks from ChromaDB and grounds the LLM answer in cited sources.
 - **Multi-format ingestion** — HTML, PDF, and DOCX documents crawled via BFS from ELTE websites.
 - **Incremental ingestion** — SHA-256 manifest avoids re-embedding unchanged documents.
 - **User file uploads** — attach documents to a chat session for ad-hoc Q&A.
@@ -33,19 +33,35 @@ Browser ──► FastAPI (app/) ──► ChromaDB (data/processed/chroma_db/)
 - `app/settings.py` — config constants (paths, model names, `TOP_K`, temperature)
 - `app/rag.py` — ChromaDB + SentenceTransformer singletons; `retrieve()`, `build_prompt()`, `call_ollama()`, `rag_query()`
 - `app/main.py` — REST endpoints (`/chat`, `/health`, uploads, sessions, models)
+- `app/ingest.py` — handles ingestion of user-uploaded files at runtime
 - `app/logger.py` — SQLite logging to `data/logs/chat_logs.db`
 - `app/static/index.html` — chat UI
 
-## Prerequisites
+## Quick Start (Docker — recommended)
+
+The fastest way to run the system. Docker Compose starts Ollama, pulls the default model, and launches the app automatically.
+
+```bash
+git clone <repo-url>
+cd elte_chat
+docker compose up --build
+```
+
+Open `http://localhost:8000/static/index.html` in your browser.
+
+> **Note:** The ChromaDB vector store is not included in the repository. Run the data pipeline notebooks after the server is up to build it.
+
+## Manual Setup
+
+### Prerequisites
 
 - Python 3.10+
-- [Ollama](https://ollama.com) running locally
-- At least one Ollama model pulled:
+- [Ollama](https://ollama.com) running locally with at least one model pulled:
   ```bash
   ollama pull llama3.2:3b
   ```
 
-## Installation
+### Installation
 
 ```bash
 git clone <repo-url>
@@ -55,15 +71,13 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Usage
-
 ### Run the API server
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-The server starts at `http://localhost:8000`. The chat UI is available at `http://localhost:8000/static/index.html`.
+The server starts at `http://localhost:8000`. The chat UI is at `http://localhost:8000/static/index.html`.
 
 ### CLI client
 
@@ -89,27 +103,29 @@ python scripts/crawler.py
 
 All tunable parameters live in `app/settings.py`:
 
-| Setting           | Default                     | Notes                                                   |
-| ----------------- | --------------------------- | ------------------------------------------------------- |
-| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2`          | Must match the model used in `02_embedding.ipynb`       |
-| `COLLECTION_NAME` | `elte_ik`                   | ChromaDB collection name                                |
-| `TOP_K`           | `3`                         | Chunks retrieved per query                              |
-| `OLLAMA_MODEL`    | `llama3.2:3b`               | Must be pulled in Ollama                                |
-| `TEMPERATURE`     | `0.1`                       | Low = factual, less hallucination                       |
-| `CHROMA_PATH`     | `data/processed/chroma_db`  | Relative to project root                                |
+| Setting           | Default                    | Notes                                                         |
+| ----------------- | -------------------------- | ------------------------------------------------------------- |
+| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2`         | Must match the model used in `02_embedding.ipynb`             |
+| `COLLECTION_NAME` | `elte_ik`                  | ChromaDB collection name                                      |
+| `TOP_K`           | `3`                        | Chunks retrieved per query                                    |
+| `OLLAMA_MODEL`    | `llama3.2:3b`              | Must be pulled in Ollama                                      |
+| `TEMPERATURE`     | `0.1`                      | Low = factual, less hallucination                             |
+| `CHROMA_PATH`     | `data/processed/chroma_db` | Relative to project root                                      |
+
+> If you change `EMBEDDING_MODEL` you must re-run `02_embedding.ipynb` to rebuild the vector store.
 
 ## Evaluation
 
-`notebooks/04_evaluation.ipynb` benchmarks four configurations against 20 test questions (15 in-scope, 5 out-of-scope):
+`notebooks/04_evaluation.ipynb` benchmarks four configurations against 20 test questions (15 in-scope, 5 out-of-scope). Results are written to `data/evaluation/`.
 
-| Config | Model         | Retrieval |
-| ------ | ------------- | --------- |
-| A1     | `llama3.2:3b` | No RAG    |
-| B1     | `llama3.2:3b` | RAG (top-5) |
-| A2     | `gemma3:4b`   | No RAG    |
-| B2     | `gemma3:4b`   | RAG (top-5) |
+| Config | Model         | RAG    | ROUGE-L | Faithfulness | Refusal rate | Avg latency |
+| ------ | ------------- | ------ | ------- | ------------ | ------------ | ----------- |
+| A1     | `llama3.2:3b` | No     | 0.117   | 0.377        | 0%           | 47.6 s      |
+| B1     | `llama3.2:3b` | top-3  | 0.436   | 0.711        | 60%          | 70.5 s      |
+| A2     | `gemma3:4b`   | No     | 0.078   | 0.355        | 0%           | 121.1 s     |
+| B2     | `gemma3:4b`   | top-3  | 0.534   | 0.844        | 80%          | 61.4 s      |
 
-Metrics: ROUGE-L, faithfulness (chunk overlap), refusal rate on out-of-scope queries, retrieval hit-rate, and response time. Results are written to `data/evaluation/`.
+**Recommended configuration: B2** (`gemma3:4b` with RAG) — highest answer quality and, counterintuitively, lower latency than the no-RAG Gemma baseline because retrieved context produces shorter, more focused answers.
 
 ## Project Structure
 
@@ -118,6 +134,7 @@ elte_chat/
 ├── app/                    # FastAPI backend
 │   ├── main.py             # API endpoints
 │   ├── rag.py              # retrieval + generation
+│   ├── ingest.py           # runtime file ingestion
 │   ├── settings.py         # configuration
 │   ├── logger.py           # SQLite logging
 │   └── static/             # web UI
@@ -126,10 +143,12 @@ elte_chat/
 │   └── chat_cli.py         # terminal client
 ├── notebooks/              # data pipeline + evaluation
 ├── data/
-│   ├── raw/                # crawled source files
-│   ├── processed/          # chunks.json + ChromaDB
-│   ├── logs/               # chat_logs.db
+│   ├── raw/                # crawled source files (gitignored)
+│   ├── processed/          # chunks.json + ChromaDB (gitignored)
+│   ├── logs/               # chat_logs.db (gitignored)
 │   └── evaluation/         # benchmark results
+├── Dockerfile
+├── docker-compose.yml
 └── requirements.txt
 ```
 
