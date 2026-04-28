@@ -7,19 +7,6 @@ Two setup paths are provided: a Docker-based zero-configuration path (recommende
 and a manual path for users who prefer to manage dependencies directly.
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section{Overview}
-\label{sec:user-overview}
-
-The ELTE IK Assistant answers student and staff questions about the Faculty of
-Informatics — curriculum requirements, exam rules, registration procedures, and
-similar administrative topics — by retrieving relevant passages from an indexed
-document corpus and grounding its answers in that content.
-The system provides two interaction modes: a browser-based chat interface and a
-lightweight command-line client.
-When a question falls outside the scope of the indexed documents, the assistant
-says so explicitly rather than generating an unsupported response.
-
-% ─────────────────────────────────────────────────────────────────────────────
 \section{Installation and Configuration}
 \label{sec:user-install}
 
@@ -96,6 +83,13 @@ Open \texttt{http://localhost:8000/static/index.html} in any modern browser once
 the server is running. The interface consists of a left sidebar listing chat
 sessions, a central chat panel, and a right sidebar for model selection.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/UI.png}
+    \caption{The ELTE IK Assistant web interface.}
+    \label{fig:ui-screenshot}
+\end{figure}
+
 \paragraph{Asking a question.}
 Type a question in the input field at the bottom of the chat panel and press
 \textbf{Enter} or click the send button. The assistant retrieves relevant document
@@ -133,55 +127,6 @@ python scripts/chat_cli.py
 Type a question at the \texttt{You:} prompt and press Enter. The client sends the
 question to the server and prints the answer. Type \texttt{exit} or press
 \texttt{Ctrl+C} to quit.
-
-% ─────────────────────────────────────────────────────────────────────────────
-\section{Use Case Diagram}
-\label{sec:user-usecase}
-
-Figure~\ref{fig:usecase} shows the primary interactions between users and the system.
-
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[
-    actor/.style={draw, circle, minimum size=0.6cm, inner sep=0pt},
-    usecase/.style={draw, ellipse, align=center, minimum width=3.2cm,
-                    minimum height=0.9cm, font=\small},
-    every edge/.style={draw, -}
-]
-
-% Actor
-\node[actor] (actor) at (0,0) {};
-\node[below=0.05cm of actor, font=\small, align=center] {Student /\\ Staff};
-% Stick figure legs and arms (manual lines)
-\draw (actor.south) -- ++(0,-0.4);
-\draw (actor.south) ++(0,-0.4) -- ++(-0.2,-0.3);
-\draw (actor.south) ++(0,-0.4) -- ++(0.2,-0.3);
-\draw (actor.west)  -- ++(-0.25,-0.2);
-\draw (actor.east)  -- ++(0.25,-0.2);
-
-% System boundary
-\draw[rounded corners] (2.0,-3.2) rectangle (9.2, 2.0);
-\node[above, font=\small\bfseries] at (5.6, 2.0) {ELTE IK Assistant};
-
-% Use cases
-\node[usecase] (uc1) at (5.6,  1.2) {Ask a question};
-\node[usecase] (uc2) at (5.6,  0.1) {View answer\\ with sources};
-\node[usecase] (uc3) at (5.6, -1.0) {Upload document};
-\node[usecase] (uc4) at (5.6, -2.1) {Select language model};
-
-% Actor connections
-\draw (actor) -- (uc1);
-\draw (actor) -- (uc2);
-\draw (actor) -- (uc3);
-\draw (actor) -- (uc4);
-
-% Include relation: ask invokes view
-\draw[dashed, ->] (uc1) -- node[right, font=\scriptsize] {$\langle\langle$includes$\rangle\rangle$} (uc2);
-
-\end{tikzpicture}
-\caption{Use case diagram for the ELTE IK Assistant}
-\label{fig:usecase}
-\end{figure}
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Example Queries}

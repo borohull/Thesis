@@ -20,55 +20,55 @@ Table~\ref{tab:e2e-tests} summarises the endpoints and behaviours verified by th
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{|l|l|p{0.42\textwidth}|}
+    \small\begin{tabular}{|l|l|p{0.28\textwidth}|l|}
         \hline
-        \textbf{Endpoint} & \textbf{Test} & \textbf{Assertion} \\
+        \textbf{Endpoint} & \textbf{Test} & \textbf{Assertion} & \textbf{Result} \\
         \hline \hline
-        \texttt{GET /health}   & server up         & \texttt{status == "ok"}, \texttt{ollama} key present \\
+        \texttt{GET /health}   & server up         & \texttt{status == "ok"}, \texttt{ollama} key present & \textbf{Pass} \\
         \hline
-        \texttt{GET /health}   & Ollama online     & \texttt{ollama == true} \\
+        \texttt{GET /health}   & Ollama online     & \texttt{ollama == true} & \textbf{Pass} \\
         \hline
-        \texttt{POST /chat}    & basic response    & 200, non-empty answer, sources list, \texttt{response\_ms > 0} \\
+        \texttt{POST /chat}    & basic response    & 200, non-empty answer, sources list, \texttt{response\_ms > 0} & \textbf{Pass} \\
         \hline
-        \texttt{POST /chat}    & in-scope query    & answer length $> 20$ characters \\
+        \texttt{POST /chat}    & in-scope query    & answer length $> 20$ characters & \textbf{Pass} \\
         \hline
-        \texttt{POST /chat}    & out-of-scope query & 200, non-empty answer \\
+        \texttt{POST /chat}    & out-of-scope query & 200, non-empty answer & \textbf{Pass} \\
         \hline
-        \texttt{POST /chat}    & source keys       & each source contains \texttt{chunk\_id} and \texttt{file} \\
+        \texttt{POST /chat}    & source keys       & each source contains \texttt{chunk\_id} and \texttt{file} & \textbf{Pass} \\
         \hline
-        \texttt{POST /chat}    & session logging   & session appears in \texttt{GET /sessions} after chat \\
+        \texttt{POST /chat}    & session logging   & session appears in \texttt{GET /sessions} after chat & \textbf{Pass} \\
         \hline
-        \texttt{GET /sessions} & session created   & session ID present after chat with \texttt{session\_id} \\
+        \texttt{GET /sessions} & session created   & session ID present after chat with \texttt{session\_id} & \textbf{Pass} \\
         \hline
-        \texttt{GET /sessions/\{id\}/messages} & messages retrievable & one message with correct \texttt{user\_message} field \\
+        \texttt{GET /sessions/\{id\}/messages} & messages retrievable & one message with correct \texttt{user\_message} field & \textbf{Pass} \\
         \hline
-        \texttt{DELETE /sessions/\{id\}} & session delete & 204, session absent from list afterwards \\
+        \texttt{DELETE /sessions/\{id\}} & session delete & 204, session absent from list afterwards & \textbf{Pass} \\
         \hline
-        \texttt{POST /upload}  & valid PDF         & 200, \texttt{status} is \texttt{"indexed"} or \texttt{"already\_indexed"} \\
+        \texttt{POST /upload}  & valid PDF         & 200, \texttt{status} is \texttt{"indexed"} or \texttt{"already\_indexed"} & \textbf{Pass} \\
         \hline
-        \texttt{POST /upload}  & duplicate file    & \texttt{status == "already\_indexed"} on second upload \\
+        \texttt{POST /upload}  & duplicate file    & \texttt{status == "already\_indexed"} on second upload & \textbf{Pass} \\
         \hline
-        \texttt{POST /upload}  & invalid extension & 415 Unsupported Media Type \\
+        \texttt{POST /upload}  & invalid extension & 415 Unsupported Media Type & \textbf{Pass} \\
         \hline
-        \texttt{GET /info}     & collection size   & \texttt{total\_chunks} is a non-negative integer \\
+        \texttt{GET /info}     & collection size   & \texttt{total\_chunks} is a non-negative integer & \textbf{Pass} \\
         \hline
-        \texttt{GET /info}     & embedding model   & \texttt{embedding\_model == "all-MiniLM-L6-v2"} \\
+        \texttt{GET /info}     & embedding model   & \texttt{embedding\_model == "all-MiniLM-L6-v2"} & \textbf{Pass} \\
         \hline
-        \texttt{GET /models}   & model list        & \texttt{models} is a non-empty list, \texttt{default} key present \\
+        \texttt{GET /models}   & model list        & \texttt{models} is a non-empty list, \texttt{default} key present & \textbf{Pass} \\
         \hline
     \end{tabular}
     \caption{End-to-end test cases and their assertions.}
     \label{tab:e2e-tests}
 \end{table}
 
-Because LLM output is non-deterministic, no test asserts exact answer text; all assertions target response structure, status codes, and field types.
+Because LLM output is non-deterministic, no test asserts exact answer text; all assertions target response structure, status codes, and field types. All 16 test cases passed on the reference hardware configuration running \texttt{llama3.2:3b} via Ollama.
 
 \subsection*{Running the Tests}
 
 Before running the suite the following prerequisites must be met: Ollama must be running (\texttt{ollama serve}), the target model must be pulled (\texttt{ollama pull llama3.2:3b}), and the FastAPI server must be started (\texttt{uvicorn app.main:app -{}-reload}). The suite is then executed with:
 
 \begin{lstlisting}[language=bash]
-python -m pytest tests/e2e/ -m e2e -v --no-cov
+python -m pytest tests
 \end{lstlisting}
 
 If the server or Ollama is not available, all tests are automatically skipped rather than failed, and the skip message states the exact command needed to resolve the issue.
@@ -89,7 +89,7 @@ The following sections present an empirical evaluation of the system across four
 \subsection{Evaluation Setup}
 \label{sec:eval-setup}
 
-\subsection{Configurations}
+\subsection*{Configurations}
 
 Four configurations were evaluated in a factorial design crossing two models with two retrieval modes:
 
@@ -111,7 +111,7 @@ Four configurations were evaluated in a factorial design crossing two models wit
 
 Both models were run locally via Ollama with 4-bit quantisation and temperature 0.1. No internet access was used during evaluation.
 
-\subsection{Test Set}
+\subsection*{Test Set}
 
 The test set consists of 20 questions divided into two categories:
 
@@ -122,7 +122,7 @@ The test set consists of 20 questions divided into two categories:
 
 Reference answers for in-scope questions were written manually by consulting the source documents. Each question was run through all four configurations independently; the model received no memory of previous questions.
 
-\subsection{Metrics}
+\subsection*{Metrics}
 
 \begin{description}
     \item[ROUGE-L] The longest-common-subsequence F1 score between the generated answer and the reference answer~\cite{lin2004rouge}. Captures lexical overlap with the ground truth on a scale from 0 to 1.
@@ -136,7 +136,7 @@ Reference answers for in-scope questions were written manually by consulting the
 \subsection{Results}
 \label{sec:eval-results}
 
-\subsection{Overall Metric Summary}
+\subsection*{Overall Metric Summary}
 
 Table~\ref{tab:eval-summary} reports the per-configuration averages across all 20 test questions.
 
@@ -156,7 +156,7 @@ Table~\ref{tab:eval-summary} reports the per-configuration averages across all 2
     \label{tab:eval-summary}
 \end{table}
 
-\subsection{Effect of RAG on Answer Quality}
+\subsection*{Effect of RAG on Answer Quality}
 
 Adding RAG context produces a consistent and substantial improvement in both lexical quality and faithfulness for both models.
 
@@ -167,23 +167,23 @@ Adding RAG context produces a consistent and substantial improvement in both lex
 
 The qualitative difference is visible in individual answers. For the question \emph{``What is a strong prerequisite?''}, the no-RAG baseline (A1) produces a generic university definition with invented ELTE-specific examples that do not appear in any source document. The RAG-augmented configuration (B1) produces an answer drawn directly from the prerequisites document: \emph{``A strong prerequisite is a prerequisite without which the follow-up subject cannot be taken in the next semester; the follow-up subject can only be registered for after the prerequisite subject has been fulfilled.''} The ROUGE-L score for this question rises from 0.13 (A1) to 0.29 (B1) and faithfulness from 0.44 to 0.80.
 
-\subsection{Model Comparison}
+\subsection*{Model Comparison}
 
 Among the RAG configurations, \texttt{gemma3:4b} (B2) outperforms \texttt{llama3.2:3b} (B1) on both answer quality metrics: ROUGE-L 0.534 vs.\ 0.436, faithfulness 0.844 vs.\ 0.711. Gemma produces more concise answers that stay closer to the retrieved context, whereas Llama tends to expand its answers with surrounding commentary.
 
 Among the no-RAG baselines, both models score similarly poorly, with Llama slightly ahead on ROUGE-L (0.117 vs.\ 0.078). Neither baseline reliably answers ELTE-specific questions correctly without retrieval.
 
-\subsection{Retrieval Quality}
+\subsection*{Retrieval Quality}
 
 The retrieval hit-rate is 0.667 (10 out of 15 in-scope questions) and is identical across all four configurations, since the retrieval step is determined solely by the embedding model and vector index. The five missed questions share a common cause: they ask about topics (Erasmus partnerships, CEEPUS network, Dean contact details) that are present in the HTML pages but were truncated or de-prioritised during chunking because the relevant content appeared in shallow navigation-style text rather than in a dedicated content section. This is the primary bottleneck limiting further ROUGE-L and faithfulness gains: when the correct chunk is not retrieved, the language model must fall back on parametric knowledge, which tends to be inaccurate for institution-specific facts.
 
-\subsection{Out-of-Scope Refusal}
+\subsection*{Out-of-Scope Refusal}
 
 Neither baseline model refuses any out-of-scope question: both A1 and A2 answer all five irrelevant queries confidently, generating plausible but entirely off-topic responses. Among the RAG configurations, refusal rates are substantially higher based on manual review of the outputs. \texttt{llama3.2:3b} with RAG (B1) correctly refuses 3 out of 5 out-of-scope questions (60\%), and \texttt{gemma3:4b} with RAG (B2) refuses 4 out of 5 (80\%). In both cases the refusal is triggered by the prompt instruction to answer only from provided context: when no relevant chunks are retrieved, the model recognises the absence of grounding material and declines to answer rather than falling back on parametric knowledge.
 
 RAG therefore has a clear secondary benefit beyond answer quality: it substantially improves the system's ability to decline out-of-scope questions. However, neither RAG configuration reaches 100\% refusal, and the no-RAG baselines offer no protection at all, confirming that the prompt-level mechanism alone is not fully reliable.
 
-\subsection{Response Latency}
+\subsection*{Response Latency}
 
 \begin{table}[H]
     \centering
@@ -207,13 +207,13 @@ All four configurations exceed the 30-second latency target defined in the requi
 \subsection{Discussion}
 \label{sec:eval-discussion}
 
-\subsection{RAG Effectiveness}
+\subsection*{RAG Effectiveness}
 
 The evaluation results confirm that RAG is effective for this use case. Grounding the language model in retrieved faculty documents more than triples ROUGE-L scores and nearly doubles faithfulness, for both of the evaluated models. The improvements are consistent and large enough to be meaningful in practice, not merely statistical noise over a 20-question benchmark.
 
 The fundamental mechanism is straightforward: without context, neither \texttt{llama3.2:3b} nor \texttt{gemma3:4b} has reliable knowledge of ELTE-specific regulations — they were trained on general web text and have no exposure to the faculty's prerequisite rules or administrative procedures. The retrieval step injects the relevant passage directly into the prompt, allowing the model to produce a grounded answer even though it has no parametric knowledge of the topic.
 
-\subsection{Limitations}
+\subsection*{Limitations}
 
 Several limitations should be acknowledged.
 
@@ -225,6 +225,6 @@ Several limitations should be acknowledged.
 
 \paragraph{Latency.} All configurations exceed the 30-second target. Achieving this target on CPU-only hardware with the current models would require either a smaller model (1B parameters) or a faster inference backend. For a deployment scenario where the server runs on shared faculty hardware with a GPU, latency would drop significantly.
 
-\subsection{Recommended Configuration}
+\subsection*{Recommended Configuration}
 
 Based on the evaluation results, \textbf{gemma3:4b with RAG (B2)} is the recommended production configuration: it achieves the highest answer quality (ROUGE-L 0.534, faithfulness 0.844) and, counterintuitively, lower latency than the no-RAG Gemma baseline (61 s vs.\ 121 s). If latency is the primary constraint, \textbf{llama3.2:3b with RAG (B1)} offers a reasonable quality-speed trade-off at 70 seconds average response time with only a modest quality reduction.

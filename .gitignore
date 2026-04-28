@@ -33,3 +33,7 @@ data/raw/
 data/processed/
 data/logs/
 data/uploads/
+# Test artifacts
+.coverage
+htmlcov/
+.pytest_cache/

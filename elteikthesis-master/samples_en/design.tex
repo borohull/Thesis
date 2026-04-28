@@ -125,6 +125,15 @@ Frontend & Vanilla JS &
 \section{Component Design}
 \label{sec:design-components}
 
+Figure~\ref{fig:class-diagram} shows the module structure of the application and the dependencies between them.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/ClassDiagram.png}
+    \caption{Class diagram of the ELTE IK Assistant application modules.}
+    \label{fig:class-diagram}
+\end{figure}
+
 \begin{itemize}
     \item \textbf{Crawler:} performs a breadth-first traversal of the ELTE Faculty of Informatics website starting from a set of seed URLs. It downloads HTML pages, PDF documents, and DOCX files into \texttt{data/raw/}, computes a SHA-256 digest of each file, and records it in a manifest. On subsequent runs only files whose digest has changed are re-downloaded, keeping re-indexing time proportional to the volume of changed content. It feeds directly into the Ingestion component.
 

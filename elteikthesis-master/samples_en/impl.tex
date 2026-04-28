@@ -308,7 +308,6 @@ Comparing the query vector against all 6112 stored embeddings by brute force on 
 
 \lstset{caption={Retrieval function (\texttt{app/rag.py})}, label=src:retrieve}
 \begin{lstlisting}[language=Python]
-# Singletons -- loaded once on import, not per request
 _client     = chromadb.PersistentClient(path=CHROMA_PATH)
 _collection = _client.get_collection(name=COLLECTION_NAME)
 _model      = SentenceTransformer(EMBEDDING_MODEL)
@@ -528,19 +527,23 @@ The repository is organised into clearly separated concerns, as summarised in Ta
         \hline
         \textbf{Path} & \textbf{Purpose} \\
         \hline \hline
-        \texttt{scripts/crawler.py}  & Resumable BFS web crawler for both ELTE domains. \\
+        \texttt{scripts/crawler.py}    & Resumable BFS web crawler for both ELTE domains. \\
         \hline
-        \texttt{app/main.py}       & FastAPI application and API endpoints. \\
+        \texttt{scripts/chat\_cli.py}  & Interactive terminal client for the chat API. \\
         \hline
-        \texttt{app/rag.py}        & Retrieval, prompt building, and Ollama integration. \\
+        \texttt{app/main.py}           & FastAPI application and all HTTP endpoints. \\
         \hline
-        \texttt{app/settings.py}   & Centralised configuration constants. \\
+        \texttt{app/rag.py}            & Retrieval, prompt building, and Ollama integration. \\
         \hline
-        \texttt{app/logger.py}     & SQLite-backed chat logging. \\
+        \texttt{app/ingest.py}         & File loading, chunking, and live embedding for user-uploaded documents. \\
         \hline
-        \texttt{app/static/}       & Single-page HTML/CSS/JS frontend. \\
+        \texttt{app/logger.py}         & SQLite-backed chat and upload logging. \\
         \hline
-        \texttt{scripts/chat\_cli.py} & Interactive terminal client for the chat API. \\
+        \texttt{app/settings.py}       & Centralised configuration constants. \\
+        \hline
+        \texttt{app/static/}           & Single-page HTML/CSS/JS frontend. \\
+        \hline
+        \texttt{tests/}                & End-to-end pytest suite covering all API endpoints. \\
         \hline
         \texttt{notebooks/01\_data\_ingestion.ipynb} & Document loading, chunking, and manifest update. \\
         \hline
@@ -555,6 +558,8 @@ The repository is organised into clearly separated concerns, as summarised in Ta
         \texttt{data/processed/}   & \texttt{chunks.json}, \texttt{manifest.json}, and ChromaDB vector store. \\
         \hline
         \texttt{data/logs/}        & SQLite chat log database. \\
+        \hline
+        \texttt{data/uploads/}     & User-uploaded documents stored after ingestion. \\
         \hline
     \end{tabular}
     \caption{Project directory structure and file responsibilities.}
