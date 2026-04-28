@@ -1,5 +1,5 @@
 config,model,rag,id,question,reference,in_scope,expected_source,answer,response_ms,rouge_l,faithfulness,refused_auto,refused_manual,retrieval_hit
-A_llama32,llama3.2:3b,False,1,What is a strong prerequisite?,A strong prerequisite must be completed before taking the follow-up subject. You cannot register for the follow-up until the prerequisite is fulfilled. Neptun will automatically deregister you if you do not meet it.,True,prerequisites,"A strong prerequisite is a fundamental requirement that must be met before starting a course, program, or degree at an institution, such as a university. It is typically a previous course or set of courses that provides a solid foundation for the subject matter being studied.
+A_llama32,llama3.2:3b,FALSE,1,What is a strong prerequisite?,A strong prerequisite must be completed before taking the follow-up subject. You cannot register for the follow-up until the prerequisite is fulfilled. Neptun will automatically deregister you if you do not meet it.,TRUE,prerequisites,"A strong prerequisite is a fundamental requirement that must be met before starting a course, program, or degree at an institution, such as a university. It is typically a previous course or set of courses that provides a solid foundation for the subject matter being studied.
 
 In the context of ELTE Faculty of Informatics, a strong prerequisite might include:
 
@@ -7,18 +7,18 @@ In the context of ELTE Faculty of Informatics, a strong prerequisite might inclu
 * Completion of a calculus or linear algebra course
 * Familiarity with a particular software tool or technology (e.g., SQL or HTML/CSS)
 
-Meeting the prerequisites ensures that students have the necessary knowledge and skills to succeed in the course or program, and helps to prevent students from falling behind or struggling to keep up with the material.",49031,0.1333,0.4385,,,True
-A_llama32,llama3.2:3b,False,2,What is a weak prerequisite?,"A weak prerequisite can be taken in the same semester as the follow-up subject, but must be completed before you can pass the follow-up. If not completed, your grade will automatically be failed even if you pass the exam.",True,prerequisites,"A weak prerequisite, also known as a ""weak"" or ""incomplete"" prerequisite, refers to a course that is not strictly required for a specific program or major, but may be beneficial or recommended for students who want to pursue additional coursework or electives in a related field.
+Meeting the prerequisites ensures that students have the necessary knowledge and skills to succeed in the course or program, and helps to prevent students from falling behind or struggling to keep up with the material.",49031,0.1333,0.4385,,,TRUE
+A_llama32,llama3.2:3b,FALSE,2,What is a weak prerequisite?,"A weak prerequisite can be taken in the same semester as the follow-up subject, but must be completed before you can pass the follow-up. If not completed, your grade will automatically be failed even if you pass the exam.",TRUE,prerequisites,"A weak prerequisite, also known as a ""weak"" or ""incomplete"" prerequisite, refers to a course that is not strictly required for a specific program or major, but may be beneficial or recommended for students who want to pursue additional coursework or electives in a related field.
 
-In the context of ELTE Faculty of Informatics, a weak prerequisite might be a course that is not essential for completing the core curriculum, but could provide additional knowledge or skills that are relevant to the student's interests or career goals.",23278,0.155,0.4598,,,True
-A_llama32,llama3.2:3b,False,3,What happens if I pass the follow-up exam but fail the weak prerequisite?,"Your grade in the follow-up subject will automatically be failed or unfulfilled, even if you pass its exam.",True,prerequisites,"If you pass the follow-up exam but fail the weak prerequisite, it's likely that you won't be able to register for the course you wanted.
+In the context of ELTE Faculty of Informatics, a weak prerequisite might be a course that is not essential for completing the core curriculum, but could provide additional knowledge or skills that are relevant to the student's interests or career goals.",23278,0.155,0.4598,,,TRUE
+A_llama32,llama3.2:3b,FALSE,3,What happens if I pass the follow-up exam but fail the weak prerequisite?,"Your grade in the follow-up subject will automatically be failed or unfulfilled, even if you pass its exam.",TRUE,prerequisites,"If you pass the follow-up exam but fail the weak prerequisite, it's likely that you won't be able to register for the course you wanted.
 
 In most cases, a weak prerequisite is a condition that must be met before you can take a specific course. If you don't meet this condition, you won't be allowed to enroll in the course, even if you pass the follow-up exam.
 
 However, it's always best to check with your department or faculty for specific policies and procedures regarding weak prerequisites. They may have different rules or exceptions, so it's worth verifying before making any decisions.
 
-It's also possible that you might need to retake the weak prerequisite course or complete additional requirements before being allowed to register for the desired course.",31352,0.1161,0.5591,,,True
-A_llama32,llama3.2:3b,False,4,How are strong prerequisites marked in the curriculum?,Strong prerequisites have no special annotation in the curriculum.,True,prerequisites,"In ELTE Faculty of Informatics, strong prerequisites are typically marked with a ""M"" (Magyar for ""must"") symbol or a notation indicating that they are mandatory prerequisites. This means that students must have completed these courses before enrolling in the next course.
+It's also possible that you might need to retake the weak prerequisite course or complete additional requirements before being allowed to register for the desired course.",31352,0.1161,0.5591,,,TRUE
+A_llama32,llama3.2:3b,FALSE,4,How are strong prerequisites marked in the curriculum?,Strong prerequisites have no special annotation in the curriculum.,TRUE,prerequisites,"In ELTE Faculty of Informatics, strong prerequisites are typically marked with a ""M"" (Magyar for ""must"") symbol or a notation indicating that they are mandatory prerequisites. This means that students must have completed these courses before enrolling in the next course.
 
 For example, if a course has a prerequisite like this:
 
@@ -26,13 +26,13 @@ For example, if a course has a prerequisite like this:
 
 It indicates that students must have completed [Course Name] to be eligible for enrollment in the current course.
 
-Please note that specific curriculum details may change over time, and it's always best to check with the faculty or department directly for the most up-to-date information.",26293,0.1081,0.4949,,,True
-A_llama32,llama3.2:3b,False,5,How are weak prerequisites marked in the curriculum?,Weak prerequisites are marked with the annotation 'weak' in the prerequisites column of the curriculum.,True,prerequisites,"I'm happy to help you with your question!
+Please note that specific curriculum details may change over time, and it's always best to check with the faculty or department directly for the most up-to-date information.",26293,0.1081,0.4949,,,TRUE
+A_llama32,llama3.2:3b,FALSE,5,How are weak prerequisites marked in the curriculum?,Weak prerequisites are marked with the annotation 'weak' in the prerequisites column of the curriculum.,TRUE,prerequisites,"I'm happy to help you with your question!
 
 In ELTE Faculty of Informatics, weak prerequisites are typically marked as ""optional"" or ""recommended"" in the curriculum. This means that students can choose to take these courses if they meet the basic requirements, but it's not mandatory.
 
-However, please note that this information might be subject to change, and I would recommend checking the official ELTE Faculty of Informatics website or contacting the faculty directly for the most up-to-date and accurate information on curriculum requirements.",18625,0.1765,0.4458,,,True
-A_llama32,llama3.2:3b,False,6,What does Neptun do if I don't meet a strong prerequisite?,Neptun will automatically deregister you from the follow-up subject if you do not meet the strong prerequisite.,True,prerequisites,"I'm happy to help you with your question!
+However, please note that this information might be subject to change, and I would recommend checking the official ELTE Faculty of Informatics website or contacting the faculty directly for the most up-to-date and accurate information on curriculum requirements.",18625,0.1765,0.4458,,,TRUE
+A_llama32,llama3.2:3b,FALSE,6,What does Neptun do if I don't meet a strong prerequisite?,Neptun will automatically deregister you from the follow-up subject if you do not meet the strong prerequisite.,TRUE,prerequisites,"I'm happy to help you with your question!
 
 Neptun is the Hungarian student information system, and it's used by ELTE (Eötvös Loránd University) students. If you don't meet a strong prerequisite for a course, Neptun will not allow you to register for that course.
 
@@ -42,8 +42,8 @@ However, there are some alternatives:
 2. You can contact the department or faculty of the course you're interested in and ask if they have any alternative courses or modules that you can take instead.
 3. In some cases, you may be able to take a "" Bridge Course"" (Hidakó tanfolyam) which is designed for students who don't meet the prerequisites.
 
-It's always best to check with your department or faculty advisor for specific guidance on how to proceed. They can provide more detailed information and help you find a solution that works for you.",38355,0.1,0.4416,,,True
-A_llama32,llama3.2:3b,False,7,Can I register for a follow-up subject without completing its strong prerequisite?,No. You can only register for the follow-up subject after the strong prerequisite has been fulfilled and completed.,True,prerequisites,"A question from an ELTE Faculty of Informatics student!
+It's always best to check with your department or faculty advisor for specific guidance on how to proceed. They can provide more detailed information and help you find a solution that works for you.",38355,0.1,0.4416,,,TRUE
+A_llama32,llama3.2:3b,FALSE,7,Can I register for a follow-up subject without completing its strong prerequisite?,No. You can only register for the follow-up subject after the strong prerequisite has been fulfilled and completed.,TRUE,prerequisites,"A question from an ELTE Faculty of Informatics student!
 
 In general, it's not recommended to register for a follow-up subject without completing its strong prerequisites. Here's why:
 
@@ -62,27 +62,27 @@ To determine whether it's possible to register for a follow-up subject without c
 2. Consulting with your department's advisor or instructor.
 3. Reviewing any specific requirements or exceptions mentioned in the course syllabus.
 
-If you're unsure about the registration process, feel free to ask me for more guidance!",99590,0.0916,0.5219,,,False
-A_llama32,llama3.2:3b,False,8,"If I fail a weak prerequisite, does it count toward my subject registration limit?","No. If the follow-up subject cannot be passed due to a failed weak prerequisite, it will not be counted into the maximum 3 subject registrations per subject limit.",True,prerequisites,"ERROR: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=120)",122171,,0.0,,,True
-A_llama32,llama3.2:3b,False,9,What is the difference between strong and weak prerequisites?,Strong prerequisites must be completed before you can register for the follow-up subject. Weak prerequisites can be taken in the same semester but must be completed before passing the follow-up.,True,prerequisites,"ERROR: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=120)",122394,,0.0,,,True
-A_llama32,llama3.2:3b,False,10,"If a subject has both a practical and a theoretical part with different codes, which is the weak prerequisite?",The practical subject is a weak prerequisite of the theoretical (exam) subject offered in the same semester.,True,prerequisites,"In this case, it's difficult to determine which one is the weak prerequisite without more information about the specific courses or subjects you're referring to. However, I can provide some general guidance.
+If you're unsure about the registration process, feel free to ask me for more guidance!",99590,0.0916,0.5219,,,FALSE
+A_llama32,llama3.2:3b,FALSE,8,"If I fail a weak prerequisite, does it count toward my subject registration limit?","No. If the follow-up subject cannot be passed due to a failed weak prerequisite, it will not be counted into the maximum 3 subject registrations per subject limit.",TRUE,prerequisites,"ERROR: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=120)",122171,,0,,,TRUE
+A_llama32,llama3.2:3b,FALSE,9,What is the difference between strong and weak prerequisites?,Strong prerequisites must be completed before you can register for the follow-up subject. Weak prerequisites can be taken in the same semester but must be completed before passing the follow-up.,TRUE,prerequisites,"ERROR: HTTPConnectionPool(host='localhost', port=11434): Read timed out. (read timeout=120)",122394,,0,,,TRUE
+A_llama32,llama3.2:3b,FALSE,10,"If a subject has both a practical and a theoretical part with different codes, which is the weak prerequisite?",The practical subject is a weak prerequisite of the theoretical (exam) subject offered in the same semester.,TRUE,prerequisites,"In this case, it's difficult to determine which one is the weak prerequisite without more information about the specific courses or subjects you're referring to. However, I can provide some general guidance.
 
 If a subject has both a practical and a theoretical part with different codes, it's likely that the practical part is considered a weak prerequisite for the theoretical part. This is because practical skills and knowledge are often acquired through hands-on experience and may not be directly transferable to a purely theoretical setting.
 
 In many cases, the practical part of a subject is designed to provide students with foundational skills and knowledge that can then be built upon in a more theoretical context. As such, it's possible that the practical part is considered a weak prerequisite for the theoretical part, as it may not provide the same level of depth or understanding as direct study of the theoretical material.
 
-That being said, without more information about the specific courses or subjects you're referring to, it's impossible to say for certain which one is the weak prerequisite. It's always best to check with your instructor or consult the course syllabus to determine the relative importance and prerequisites for each part of the subject.",71145,0.1048,0.5343,,,True
-A_llama32,llama3.2:3b,False,11,Who is the Dean of ELTE Faculty of Informatics?,"Tamás Kozsik PhD, associate professor, is the Dean of ELTE Faculty of Informatics.",True,ELTE,"I'd be happy to help you with that question! However, I'm a large language model, I don't have real-time information and my knowledge cutoff is December 2023. 
+That being said, without more information about the specific courses or subjects you're referring to, it's impossible to say for certain which one is the weak prerequisite. It's always best to check with your instructor or consult the course syllabus to determine the relative importance and prerequisites for each part of the subject.",71145,0.1048,0.5343,,,TRUE
+A_llama32,llama3.2:3b,FALSE,11,Who is the Dean of ELTE Faculty of Informatics?,"Tamás Kozsik PhD, associate professor, is the Dean of ELTE Faculty of Informatics.",TRUE,ELTE,"I'd be happy to help you with that question! However, I'm a large language model, I don't have real-time information and my knowledge cutoff is December 2023. 
 
-As of my knowledge cutoff, I do not have the most up-to-date information on the current Dean of ELTE Faculty of Informatics. For the most accurate and recent information, I recommend checking the official website of ELTE University or contacting their administration directly. They would be able to provide you with the most current information on the faculty's leadership.",20172,0.1495,0.3488,,,False
-A_llama32,llama3.2:3b,False,12,What is the email address of the Dean?,The Dean's email address is dekan@inf.elte.hu.,True,ELTE,"I don't have have access to the current email address of the Dean at the ELTE Faculty of Informatics. However, I can suggest some options for you to find the contact information:
+As of my knowledge cutoff, I do not have the most up-to-date information on the current Dean of ELTE Faculty of Informatics. For the most accurate and recent information, I recommend checking the official website of ELTE University or contacting their administration directly. They would be able to provide you with the most current information on the faculty's leadership.",20172,0.1495,0.3488,,,FALSE
+A_llama32,llama3.2:3b,FALSE,12,What is the email address of the Dean?,The Dean's email address is dekan@inf.elte.hu.,TRUE,ELTE,"I don't have have access to the current email address of the Dean at the ELTE Faculty of Informatics. However, I can suggest some options for you to find the contact information:
 
 1. Check the official website of the ELTE Faculty of Informatics: You can visit the faculty's website and look for the ""Contact"" or ""Administration"" section, where you may find the email address of the Dean.
 2. Contact the faculty's secretariat: You can try reaching out to the faculty's secretariat or administrative office to ask for the email address of the Dean. They should be able to provide you with the necessary information.
 3. Check the university's directory: The ELTE University website may have a staff directory that includes contact information, including email addresses, for faculty members and administrators.
 
-I hope this helps! If you need more assistance, feel free to ask.",30230,0.0759,0.4406,,,True
-A_llama32,llama3.2:3b,False,13,What topics does the Computer Science BSc program cover?,"The Computer Science BSc covers algorithms, data structures, programming languages, software technology, web development, information systems, cryptography, cyber security, artificial intelligence, data science, robotics, Fintech, and quantum technologies.",True,ELTE,"The Computer Science BSc program at ELTE (Eötvös Loránd University) in Budapest, Hungary covers a wide range of topics in computer science and related fields. Here are some of the key areas of study:
+I hope this helps! If you need more assistance, feel free to ask.",30230,0.0759,0.4406,,,TRUE
+A_llama32,llama3.2:3b,FALSE,13,What topics does the Computer Science BSc program cover?,"The Computer Science BSc covers algorithms, data structures, programming languages, software technology, web development, information systems, cryptography, cyber security, artificial intelligence, data science, robotics, Fintech, and quantum technologies.",TRUE,ELTE,"The Computer Science BSc program at ELTE (Eötvös Loránd University) in Budapest, Hungary covers a wide range of topics in computer science and related fields. Here are some of the key areas of study:
 
 1. **Algorithms and Data Structures**: Students learn about various algorithms, data structures, and software design patterns.
 2. **Computer Systems**: The program covers the basics of computer systems, including hardware, operating systems, and networking.
@@ -95,22 +95,22 @@ A_llama32,llama3.2:3b,False,13,What topics does the Computer Science BSc program
 9. **Data Science and Analytics**: Students learn about data analysis, visualization, and mining techniques.
 10. **Mathematics for Computer Science**: This course covers mathematical concepts used in computer science, such as discrete mathematics, probability theory, and linear algebra.
 
-Please note that the specific curriculum may be subject to change, and not all topics might be covered in every academic year. It's always best to check with the ELTE Faculty of Informatics or consult the official website for the most up-to-date information on the Computer Science BSc program.",55637,0.1135,0.435,,,False
-A_llama32,llama3.2:3b,False,14,How many Erasmus partner universities does ELTE Faculty of Informatics have?,ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries.,True,ELTE,"I don't have the most up-to-date information on the number of Erasmus partner universities that ELTE Faculty of Informatics has. However, I can suggest some options to help you find the answer:
+Please note that the specific curriculum may be subject to change, and not all topics might be covered in every academic year. It's always best to check with the ELTE Faculty of Informatics or consult the official website for the most up-to-date information on the Computer Science BSc program.",55637,0.1135,0.435,,,FALSE
+A_llama32,llama3.2:3b,FALSE,14,How many Erasmus partner universities does ELTE Faculty of Informatics have?,ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries.,TRUE,ELTE,"I don't have the most up-to-date information on the number of Erasmus partner universities that ELTE Faculty of Informatics has. However, I can suggest some options to help you find the answer:
 
 1. Check the official website of ELTE Faculty of Informatics: You can visit the faculty's website and look for the Internationalization or Erasmus section, where they might have a list of their partner universities.
 2. Contact the International Office: Reach out to the International Office at ELTE Faculty of Informatics directly and ask about their current number of Erasmus partner universities.
 3. Check the European University Institute (EUI) database: The EUI maintains a database of Erasmus partner universities, which might include ELTE Faculty of Informatics.
 
-I apologize for not being able to provide a more specific answer, but I hope these suggestions help you find the information you're looking for!",30773,0.0875,0.4437,,,False
-A_llama32,llama3.2:3b,False,15,What is the CEEPUS network at ELTE Faculty of Informatics?,ELTE Faculty of Informatics coordinates a CEEPUS network with 18 partner universities from 11 countries.,True,ELTE,"The CEEPUS (Central European Exchange and Cooperation in University Studies) network is an international student exchange program that connects universities across Central Europe, including the ELTE Faculty of Informatics. The network aims to promote academic cooperation, mobility, and exchange among students from participating countries.
+I apologize for not being able to provide a more specific answer, but I hope these suggestions help you find the information you're looking for!",30773,0.0875,0.4437,,,FALSE
+A_llama32,llama3.2:3b,FALSE,15,What is the CEEPUS network at ELTE Faculty of Informatics?,ELTE Faculty of Informatics coordinates a CEEPUS network with 18 partner universities from 11 countries.,TRUE,ELTE,"The CEEPUS (Central European Exchange and Cooperation in University Studies) network is an international student exchange program that connects universities across Central Europe, including the ELTE Faculty of Informatics. The network aims to promote academic cooperation, mobility, and exchange among students from participating countries.
 
 As a member of the CEEPUS network at ELTE Faculty of Informatics, students can participate in various exchange programs, such as semester or year-long exchanges, research projects, or joint degree programs with partner universities in Central Europe. This allows them to gain international experience, broaden their academic horizons, and develop valuable skills for their future careers.
 
 The CEEPUS network also provides opportunities for students to engage in collaborative research projects, participate in international conferences, and develop language skills through cultural exchange activities.
 
-Overall, the CEEPUS network at ELTE Faculty of Informatics offers a unique opportunity for students to explore academic and professional possibilities beyond Hungary's borders, while contributing to the growth of Central European higher education networks.",39752,0.1124,0.4348,,,False
-A_llama32,llama3.2:3b,False,16,What is the weather like in Budapest?,,False,,"I'd be happy to help you with the current weather in Budapest!
+Overall, the CEEPUS network at ELTE Faculty of Informatics offers a unique opportunity for students to explore academic and professional possibilities beyond Hungary's borders, while contributing to the growth of Central European higher education networks.",39752,0.1124,0.4348,,,FALSE
+A_llama32,llama3.2:3b,FALSE,16,What is the weather like in Budapest?,,FALSE,,"I'd be happy to help you with the current weather in Budapest!
 
 Since I'm an AI and do not have real-time access to current weather conditions, I can suggest some options for you to find out the current weather in Budapest:
 
@@ -118,9 +118,9 @@ Since I'm an AI and do not have real-time access to current weather conditions, 
 2. Use a mobile app: You can download a weather app on your smartphone, such as Dark Sky or Weather Underground, which can provide you with real-time weather information for Budapest.
 3. Check social media: Many weather services and meteorological organizations share updates on their social media channels, so you can check their Twitter or Facebook accounts for the latest weather news.
 
-Please note that the weather in Budapest can change quickly, especially during the spring and autumn seasons, so it's always a good idea to check the forecast before heading out.",43153,,0.5342,False,,
-A_llama32,llama3.2:3b,False,17,Who won the FIFA World Cup in 2022?,,False,,"The winner of the 2022 FIFA World Cup was Argentina, led by Lionel Messi. They defeated France 4-2 in a penalty shootout after the match ended 3-3 after extra time on December 18, 2022, at the Lusail Iconic Stadium in Qatar.",13070,,0.2439,False,,
-A_llama32,llama3.2:3b,False,18,How do I cook pasta?,,False,,"Cooking pasta is a straightforward process that requires some basic steps. Here's a step-by-step guide to help you cook perfect pasta:
+Please note that the weather in Budapest can change quickly, especially during the spring and autumn seasons, so it's always a good idea to check the forecast before heading out.",43153,,0.5342,FALSE,0,
+A_llama32,llama3.2:3b,FALSE,17,Who won the FIFA World Cup in 2022?,,FALSE,,"The winner of the 2022 FIFA World Cup was Argentina, led by Lionel Messi. They defeated France 4-2 in a penalty shootout after the match ended 3-3 after extra time on December 18, 2022, at the Lusail Iconic Stadium in Qatar.",13070,,0.2439,FALSE,0,
+A_llama32,llama3.2:3b,FALSE,18,How do I cook pasta?,,FALSE,,"Cooking pasta is a straightforward process that requires some basic steps. Here's a step-by-step guide to help you cook perfect pasta:
 
 **Materials needed:**
 
@@ -151,44 +151,44 @@ A_llama32,llama3.2:3b,False,18,How do I cook pasta?,,False,,"Cooking pasta is a 
 * Use a timer to ensure you don't overcook the pasta.
 * Reserve some of the pasta water before draining it, as this can be used to create a creamy sauce.
 
-I hope this helps! Do you have any specific questions about cooking pasta?",93041,,0.3591,False,,
-A_llama32,llama3.2:3b,False,19,What is the population of Hungary?,,False,,"As of my knowledge cutoff in 2023, the estimated population of Hungary is approximately 9.8 million people. However, please note that population figures may have changed slightly since then due to various factors such as birth rates, death rates, and migration.
+I hope this helps! Do you have any specific questions about cooking pasta?",93041,,0.3591,FALSE,0,
+A_llama32,llama3.2:3b,FALSE,19,What is the population of Hungary?,,FALSE,,"As of my knowledge cutoff in 2023, the estimated population of Hungary is approximately 9.8 million people. However, please note that population figures may have changed slightly since then due to various factors such as birth rates, death rates, and migration.
 
-If you need more up-to-date or accurate information, I recommend checking with a reliable source such as the Hungarian Central Statistical Office (KSH) or other reputable demographic databases.",17678,,0.3478,False,,
-A_llama32,llama3.2:3b,False,20,Tell me a joke.,,False,,"Why did the programmer quit his job?
+If you need more up-to-date or accurate information, I recommend checking with a reliable source such as the Hungarian Central Statistical Office (KSH) or other reputable demographic databases.",17678,,0.3478,FALSE,0,
+A_llama32,llama3.2:3b,FALSE,20,Tell me a joke.,,FALSE,,"Why did the programmer quit his job?
 
-Because he didn't get arrays! (get it? arrays... haha)",7021,,0.0625,False,,
-B_llama32,llama3.2:3b,True,1,What is a strong prerequisite?,A strong prerequisite must be completed before taking the follow-up subject. You cannot register for the follow-up until the prerequisite is fulfilled. Neptun will automatically deregister you if you do not meet it.,True,prerequisites,"According to the context, a strong prerequisite is:
+Because he didn't get arrays! (get it? arrays... haha)",7021,,0.0625,FALSE,0,
+B_llama32,llama3.2:3b,TRUE,1,What is a strong prerequisite?,A strong prerequisite must be completed before taking the follow-up subject. You cannot register for the follow-up until the prerequisite is fulfilled. Neptun will automatically deregister you if you do not meet it.,TRUE,prerequisites,"According to the context, a strong prerequisite is:
 
 * A prerequisite without which the follow-up subject cannot be taken in the next semester.
 * The follow-up subject can only be registered for after the prerequisite subject has been fulfilled.
 * It must be completed before taking the follow-up subject.
 
-It is also described using the analogy of a pyramid: you need to complete the building blocks (prerequisite) one by one to reach the top (follow-up subject).",59507,0.2857,0.8026,,,True
-B_llama32,llama3.2:3b,True,2,What is a weak prerequisite?,"A weak prerequisite can be taken in the same semester as the follow-up subject, but must be completed before you can pass the follow-up. If not completed, your grade will automatically be failed even if you pass the exam.",True,prerequisites,"According to the context, a weak prerequisite is marked as 'weak' in the curriculum.",39844,0.1818,0.7143,,,True
-B_llama32,llama3.2:3b,True,3,What happens if I pass the follow-up exam but fail the weak prerequisite?,"Your grade in the follow-up subject will automatically be failed or unfulfilled, even if you pass its exam.",True,prerequisites,"According to the context, if you pass the follow-up exam but fail the weak prerequisite, your grade in the follow-up subject will be automatically marked as 'Unfulfilled' in Neptun.",71848,0.4,0.8621,,,True
-B_llama32,llama3.2:3b,True,4,How are strong prerequisites marked in the curriculum?,Strong prerequisites have no special annotation in the curriculum.,True,prerequisites,Strong prerequisites have no special annotation.,43834,0.8,0.8333,,,True
-B_llama32,llama3.2:3b,True,5,How are weak prerequisites marked in the curriculum?,Weak prerequisites are marked with the annotation 'weak' in the prerequisites column of the curriculum.,True,prerequisites,Weak prerequisites are marked as 'weak' in the curriculum.,37300,0.6667,0.7778,,,True
-B_llama32,llama3.2:3b,True,6,What does Neptun do if I don't meet a strong prerequisite?,Neptun will automatically deregister you from the follow-up subject if you do not meet the strong prerequisite.,True,prerequisites,Neptun will automatically deregister you from the subject.,45627,0.6154,1.0,,,True
-B_llama32,llama3.2:3b,True,7,Can I register for a follow-up subject without completing its strong prerequisite?,No. You can only register for the follow-up subject after the strong prerequisite has been fulfilled and completed.,True,prerequisites,"No. According to the context, if there is a strong prerequisite, you cannot register for the follow-up subject until you fulfill the prerequisite. The pyramid analogy explains that you need to complete the building blocks (prerequisite) before reaching the top (follow-up subject). If you try to register for the follow-up subject without completing the prerequisite, Neptun will automatically deregister you from the subject.",81158,0.2588,0.7302,,,False
-B_llama32,llama3.2:3b,True,8,"If I fail a weak prerequisite, does it count toward my subject registration limit?","No. If the follow-up subject cannot be passed due to a failed weak prerequisite, it will not be counted into the maximum 3 subject registrations per subject limit.",True,prerequisites,"No, if you fail a weak prerequisite, it does not count towards your subject registration limit. According to the context, ""If you register for the follow-up subject, but you cannot pass it in a given semester due to a failed prerequisite, the follow-up subject will not be counted into the maximum 3 subject registrations/subject limit during your studies (regarding termination of student status).""",73158,0.5263,0.8254,,,True
-B_llama32,llama3.2:3b,True,9,What is the difference between strong and weak prerequisites?,Strong prerequisites must be completed before you can register for the follow-up subject. Weak prerequisites can be taken in the same semester but must be completed before passing the follow-up.,True,prerequisites,"According to the context, there is only one statement that describes the difference between strong and weak prerequisites. Here it is:
+It is also described using the analogy of a pyramid: you need to complete the building blocks (prerequisite) one by one to reach the top (follow-up subject).",59507,0.2857,0.8026,,,TRUE
+B_llama32,llama3.2:3b,TRUE,2,What is a weak prerequisite?,"A weak prerequisite can be taken in the same semester as the follow-up subject, but must be completed before you can pass the follow-up. If not completed, your grade will automatically be failed even if you pass the exam.",TRUE,prerequisites,"According to the context, a weak prerequisite is marked as 'weak' in the curriculum.",39844,0.1818,0.7143,,,TRUE
+B_llama32,llama3.2:3b,TRUE,3,What happens if I pass the follow-up exam but fail the weak prerequisite?,"Your grade in the follow-up subject will automatically be failed or unfulfilled, even if you pass its exam.",TRUE,prerequisites,"According to the context, if you pass the follow-up exam but fail the weak prerequisite, your grade in the follow-up subject will be automatically marked as 'Unfulfilled' in Neptun.",71848,0.4,0.8621,,,TRUE
+B_llama32,llama3.2:3b,TRUE,4,How are strong prerequisites marked in the curriculum?,Strong prerequisites have no special annotation in the curriculum.,TRUE,prerequisites,Strong prerequisites have no special annotation.,43834,0.8,0.8333,,,TRUE
+B_llama32,llama3.2:3b,TRUE,5,How are weak prerequisites marked in the curriculum?,Weak prerequisites are marked with the annotation 'weak' in the prerequisites column of the curriculum.,TRUE,prerequisites,Weak prerequisites are marked as 'weak' in the curriculum.,37300,0.6667,0.7778,,,TRUE
+B_llama32,llama3.2:3b,TRUE,6,What does Neptun do if I don't meet a strong prerequisite?,Neptun will automatically deregister you from the follow-up subject if you do not meet the strong prerequisite.,TRUE,prerequisites,Neptun will automatically deregister you from the subject.,45627,0.6154,1,,,TRUE
+B_llama32,llama3.2:3b,TRUE,7,Can I register for a follow-up subject without completing its strong prerequisite?,No. You can only register for the follow-up subject after the strong prerequisite has been fulfilled and completed.,TRUE,prerequisites,"No. According to the context, if there is a strong prerequisite, you cannot register for the follow-up subject until you fulfill the prerequisite. The pyramid analogy explains that you need to complete the building blocks (prerequisite) before reaching the top (follow-up subject). If you try to register for the follow-up subject without completing the prerequisite, Neptun will automatically deregister you from the subject.",81158,0.2588,0.7302,,,FALSE
+B_llama32,llama3.2:3b,TRUE,8,"If I fail a weak prerequisite, does it count toward my subject registration limit?","No. If the follow-up subject cannot be passed due to a failed weak prerequisite, it will not be counted into the maximum 3 subject registrations per subject limit.",TRUE,prerequisites,"No, if you fail a weak prerequisite, it does not count towards your subject registration limit. According to the context, ""If you register for the follow-up subject, but you cannot pass it in a given semester due to a failed prerequisite, the follow-up subject will not be counted into the maximum 3 subject registrations/subject limit during your studies (regarding termination of student status).""",73158,0.5263,0.8254,,,TRUE
+B_llama32,llama3.2:3b,TRUE,9,What is the difference between strong and weak prerequisites?,Strong prerequisites must be completed before you can register for the follow-up subject. Weak prerequisites can be taken in the same semester but must be completed before passing the follow-up.,TRUE,prerequisites,"According to the context, there is only one statement that describes the difference between strong and weak prerequisites. Here it is:
 
-Weak prerequisites are marked as ‘weak’ .",49118,0.1356,0.6429,,,True
-B_llama32,llama3.2:3b,True,10,"If a subject has both a practical and a theoretical part with different codes, which is the weak prerequisite?",The practical subject is a weak prerequisite of the theoretical (exam) subject offered in the same semester.,True,prerequisites,"According to the context, if a subject has both a practical and a theoretical part with different codes, the practical subject is considered as a weak prerequisite of the theoretical (exam) subject.",69450,0.4898,0.8438,,,True
-B_llama32,llama3.2:3b,True,11,Who is the Dean of ELTE Faculty of Informatics?,"Tamás Kozsik PhD, associate professor, is the Dean of ELTE Faculty of Informatics.",True,ELTE,"The answer is not in the provided context. The context mentions Dr. Zoltán Horváth as the Professor and Head of the Doctoral School of Informatics, but it does not mention him as the Dean of the Faculty of Informatics.",119546,0.2545,0.5385,,,False
-B_llama32,llama3.2:3b,True,12,What is the email address of the Dean?,The Dean's email address is dekan@inf.elte.hu.,True,ELTE,"The email address of the Dean, Tamás Kozsik, is dekan@inf.elte.hu.",102660,0.6667,0.5,,,True
-B_llama32,llama3.2:3b,True,13,What topics does the Computer Science BSc program cover?,"The Computer Science BSc covers algorithms, data structures, programming languages, software technology, web development, information systems, cryptography, cyber security, artificial intelligence, data science, robotics, Fintech, and quantum technologies.",True,ELTE,"Unfortunately, the provided context doesn't explicitly state what topics the Computer Science BSc program covers. However, it mentions that the Preliminary Course is assembled on topics relevant to a Computer Science BSc program, such as algorithmic thinking skills, Mathematics, English language, and basic knowledge about computers and programming.
+Weak prerequisites are marked as ‘weak’ .",49118,0.1356,0.6429,,,TRUE
+B_llama32,llama3.2:3b,TRUE,10,"If a subject has both a practical and a theoretical part with different codes, which is the weak prerequisite?",The practical subject is a weak prerequisite of the theoretical (exam) subject offered in the same semester.,TRUE,prerequisites,"According to the context, if a subject has both a practical and a theoretical part with different codes, the practical subject is considered as a weak prerequisite of the theoretical (exam) subject.",69450,0.4898,0.8438,,,TRUE
+B_llama32,llama3.2:3b,TRUE,11,Who is the Dean of ELTE Faculty of Informatics?,"Tamás Kozsik PhD, associate professor, is the Dean of ELTE Faculty of Informatics.",TRUE,ELTE,"The answer is not in the provided context. The context mentions Dr. Zoltán Horváth as the Professor and Head of the Doctoral School of Informatics, but it does not mention him as the Dean of the Faculty of Informatics.",119546,0.2545,0.5385,,,FALSE
+B_llama32,llama3.2:3b,TRUE,12,What is the email address of the Dean?,The Dean's email address is dekan@inf.elte.hu.,TRUE,ELTE,"The email address of the Dean, Tamás Kozsik, is dekan@inf.elte.hu.",102660,0.6667,0.5,,,TRUE
+B_llama32,llama3.2:3b,TRUE,13,What topics does the Computer Science BSc program cover?,"The Computer Science BSc covers algorithms, data structures, programming languages, software technology, web development, information systems, cryptography, cyber security, artificial intelligence, data science, robotics, Fintech, and quantum technologies.",TRUE,ELTE,"Unfortunately, the provided context doesn't explicitly state what topics the Computer Science BSc program covers. However, it mentions that the Preliminary Course is assembled on topics relevant to a Computer Science BSc program, such as algorithmic thinking skills, Mathematics, English language, and basic knowledge about computers and programming.
 
-Additionally, the MSc in Computer Science program provides students with a comprehensive education in Computer Science in combination with specializations in various fields, but it doesn't provide information on what topics are covered in the BSc program.",106525,0.1391,0.8,,,False
-B_llama32,llama3.2:3b,True,14,How many Erasmus partner universities does ELTE Faculty of Informatics have?,ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries.,True,ELTE,ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries.,77321,1.0,0.9231,,,False
-B_llama32,llama3.2:3b,True,15,What is the CEEPUS network at ELTE Faculty of Informatics?,ELTE Faculty of Informatics coordinates a CEEPUS network with 18 partner universities from 11 countries.,True,ELTE,"There is no information about the CEEPUS network in the provided context. The context mentions the Innovation Lab, professional background and support, organizational framework, and general information about the faculty, but it does not mention the CEEPUS network.",76752,0.1132,0.4737,,,False
-B_llama32,llama3.2:3b,True,16,What is the weather like in Budapest?,,False,,"The weather in Budapest is typically warmest from May to September, with average high temperatures ranging from 23 to 28 °C (73 to 82 °F) during this period.",69156,,0.7857,False,,
-B_llama32,llama3.2:3b,True,17,Who won the FIFA World Cup in 2022?,,False,,"There is no mention of the FIFA World Cup or its winner in the provided context. The context only discusses a project (DIGITAL-2021-QCI-01-DEPLOY-NATIONAL) and rankings (QS World University Ranking), but does not include information about sports events like the FIFA World Cup.",50862,,0.3571,False,,
-B_llama32,llama3.2:3b,True,18,How do I cook pasta?,,False,,"I'm afraid that's not possible. The provided context only contains information about enrolling in ELTE Faculty of Informatics, Hungary, and does not mention cooking pasta at all.",77146,,0.4074,False,,
-B_llama32,llama3.2:3b,True,19,What is the population of Hungary?,,False,,The country’s population is less than 10 million including several minorities.,47723,,1.0,False,,
-B_llama32,llama3.2:3b,True,20,Tell me a joke.,,False,,"I'm afraid I don't have a joke to share with you. The provided context doesn't seem to include any humorous phrases or expressions that could be used as the basis for a joke. If you'd like, I can try to come up with something on the spot, but it might not be very funny!",111884,,0.4074,True,,
-A_gemma3,gemma3:4b,False,1,What is a strong prerequisite?,A strong prerequisite must be completed before taking the follow-up subject. You cannot register for the follow-up until the prerequisite is fulfilled. Neptun will automatically deregister you if you do not meet it.,True,prerequisites,"Okay, let’s talk about strong prerequisites in the context of ELTE Faculty of Informatics courses. Here’s a breakdown of what a strong prerequisite is, and why it’s important, specifically tailored for an ELTE Informatics student:
+Additionally, the MSc in Computer Science program provides students with a comprehensive education in Computer Science in combination with specializations in various fields, but it doesn't provide information on what topics are covered in the BSc program.",106525,0.1391,0.8,,,FALSE
+B_llama32,llama3.2:3b,TRUE,14,How many Erasmus partner universities does ELTE Faculty of Informatics have?,ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries.,TRUE,ELTE,ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries.,77321,1,0.9231,,,FALSE
+B_llama32,llama3.2:3b,TRUE,15,What is the CEEPUS network at ELTE Faculty of Informatics?,ELTE Faculty of Informatics coordinates a CEEPUS network with 18 partner universities from 11 countries.,TRUE,ELTE,"There is no information about the CEEPUS network in the provided context. The context mentions the Innovation Lab, professional background and support, organizational framework, and general information about the faculty, but it does not mention the CEEPUS network.",76752,0.1132,0.4737,,,FALSE
+B_llama32,llama3.2:3b,TRUE,16,What is the weather like in Budapest?,,FALSE,,"The weather in Budapest is typically warmest from May to September, with average high temperatures ranging from 23 to 28 °C (73 to 82 °F) during this period.",69156,,0.7857,FALSE,0,
+B_llama32,llama3.2:3b,TRUE,17,Who won the FIFA World Cup in 2022?,,FALSE,,"There is no mention of the FIFA World Cup or its winner in the provided context. The context only discusses a project (DIGITAL-2021-QCI-01-DEPLOY-NATIONAL) and rankings (QS World University Ranking), but does not include information about sports events like the FIFA World Cup.",50862,,0.3571,FALSE,1,
+B_llama32,llama3.2:3b,TRUE,18,How do I cook pasta?,,FALSE,,"I'm afraid that's not possible. The provided context only contains information about enrolling in ELTE Faculty of Informatics, Hungary, and does not mention cooking pasta at all.",77146,,0.4074,FALSE,1,
+B_llama32,llama3.2:3b,TRUE,19,What is the population of Hungary?,,FALSE,,The country’s population is less than 10 million including several minorities.,47723,,1,FALSE,0,
+B_llama32,llama3.2:3b,TRUE,20,Tell me a joke.,,FALSE,,"I'm afraid I don't have a joke to share with you. The provided context doesn't seem to include any humorous phrases or expressions that could be used as the basis for a joke. If you'd like, I can try to come up with something on the spot, but it might not be very funny!",111884,,0.4074,TRUE,1,
+A_gemma3,gemma3:4b,FALSE,1,What is a strong prerequisite?,A strong prerequisite must be completed before taking the follow-up subject. You cannot register for the follow-up until the prerequisite is fulfilled. Neptun will automatically deregister you if you do not meet it.,TRUE,prerequisites,"Okay, let’s talk about strong prerequisites in the context of ELTE Faculty of Informatics courses. Here’s a breakdown of what a strong prerequisite is, and why it’s important, specifically tailored for an ELTE Informatics student:
 
 **A strong prerequisite is a course that *fundamentally* equips you with the knowledge and skills needed to successfully understand and engage with a more advanced course.** It’s not just a related topic; it’s a building block upon which the more complex material is built.
 
@@ -230,8 +230,8 @@ Here’s a more detailed explanation, broken down into key aspects relevant to E
 
 **To help me give you an even more targeted answer, could you tell me:**
 
-*   Which course are you considering taking? (e.g., ""I'm thinking about taking Compiler Design."")",224922,0.05,0.3196,,,True
-A_gemma3,gemma3:4b,False,2,What is a weak prerequisite?,"A weak prerequisite can be taken in the same semester as the follow-up subject, but must be completed before you can pass the follow-up. If not completed, your grade will automatically be failed even if you pass the exam.",True,prerequisites,"Okay, let’s break down what a weak prerequisite is, particularly in the context of course scheduling and course design – which is where it’s most relevant for ELTE Faculty of Informatics students.
+*   Which course are you considering taking? (e.g., ""I'm thinking about taking Compiler Design."")",224922,0.05,0.3196,,,TRUE
+A_gemma3,gemma3:4b,FALSE,2,What is a weak prerequisite?,"A weak prerequisite can be taken in the same semester as the follow-up subject, but must be completed before you can pass the follow-up. If not completed, your grade will automatically be failed even if you pass the exam.",TRUE,prerequisites,"Okay, let’s break down what a weak prerequisite is, particularly in the context of course scheduling and course design – which is where it’s most relevant for ELTE Faculty of Informatics students.
 
 **A weak prerequisite is a course requirement that *doesn't* strictly demand you’ve *completed* the course before moving on. Instead, it indicates a *recommended* level of knowledge or skill.**
 
@@ -274,8 +274,8 @@ Do you want me to elaborate on a specific aspect of weak prerequisites, such as:
 
 *   How to assess whether you meet a weak prerequisite?
 *   How weak prerequisites relate to traditional prerequisites?
-*   Examples of weak prerequisites in a particular area of Informatics (e.g., AI, cybersecurity)?",158962,0.0842,0.3392,,,True
-A_gemma3,gemma3:4b,False,3,What happens if I pass the follow-up exam but fail the weak prerequisite?,"Your grade in the follow-up subject will automatically be failed or unfulfilled, even if you pass its exam.",True,prerequisites,"Okay, let's break down what happens if you pass the follow-up exam but fail the weak prerequisite in an ELTE Faculty of Informatics course. This is a common situation and the outcome depends on a few key factors, primarily the course's specific regulations. Here’s a detailed explanation based on typical ELTE practices and the nature of weak prerequisites:
+*   Examples of weak prerequisites in a particular area of Informatics (e.g., AI, cybersecurity)?",158962,0.0842,0.3392,,,TRUE
+A_gemma3,gemma3:4b,FALSE,3,What happens if I pass the follow-up exam but fail the weak prerequisite?,"Your grade in the follow-up subject will automatically be failed or unfulfilled, even if you pass its exam.",TRUE,prerequisites,"Okay, let's break down what happens if you pass the follow-up exam but fail the weak prerequisite in an ELTE Faculty of Informatics course. This is a common situation and the outcome depends on a few key factors, primarily the course's specific regulations. Here’s a detailed explanation based on typical ELTE practices and the nature of weak prerequisites:
 
 **Understanding the Terms:**
 
@@ -320,8 +320,8 @@ A_gemma3,gemma3:4b,False,3,What happens if I pass the follow-up exam but fail th
 
 To give you a more tailored answer, could you tell me:
 
-*   Which course are you referring to? (e.g., ""Introduction to Programming,"" ""Data Structures,"" etc.)",194835,0.0336,0.3842,,,True
-A_gemma3,gemma3:4b,False,4,How are strong prerequisites marked in the curriculum?,Strong prerequisites have no special annotation in the curriculum.,True,prerequisites,"Okay, let’s break down how strong prerequisites are marked within the ELTE Faculty of Informatics curriculum. It’s a system designed to ensure students build a solid foundation and aren't stumbling into advanced courses unprepared. Here’s a detailed explanation:
+*   Which course are you referring to? (e.g., ""Introduction to Programming,"" ""Data Structures,"" etc.)",194835,0.0336,0.3842,,,TRUE
+A_gemma3,gemma3:4b,FALSE,4,How are strong prerequisites marked in the curriculum?,Strong prerequisites have no special annotation in the curriculum.,TRUE,prerequisites,"Okay, let’s break down how strong prerequisites are marked within the ELTE Faculty of Informatics curriculum. It’s a system designed to ensure students build a solid foundation and aren't stumbling into advanced courses unprepared. Here’s a detailed explanation:
 
 **1. Course Level Designations (The Core System):**
 
@@ -361,8 +361,8 @@ Do you want me to elaborate on a specific aspect, such as:
 
 *   How the system works for a particular level (e.g., Level 3 courses)?
 *   How to assess whether you meet a ""Strongly Recommended"" prerequisite?
-*   Where to find the most up-to-date course descriptions?",208350,0.0154,0.3588,,,True
-A_gemma3,gemma3:4b,False,5,How are weak prerequisites marked in the curriculum?,Weak prerequisites are marked with the annotation 'weak' in the prerequisites column of the curriculum.,True,prerequisites,"Okay, let’s break down how weak prerequisites are marked within the ELTE Faculty of Informatics curriculum. It’s a system designed to reflect the *suggested* nature of the prerequisite, not a strict requirement. Here’s a detailed explanation:
+*   Where to find the most up-to-date course descriptions?",208350,0.0154,0.3588,,,TRUE
+A_gemma3,gemma3:4b,FALSE,5,How are weak prerequisites marked in the curriculum?,Weak prerequisites are marked with the annotation 'weak' in the prerequisites column of the curriculum.,TRUE,prerequisites,"Okay, let’s break down how weak prerequisites are marked within the ELTE Faculty of Informatics curriculum. It’s a system designed to reflect the *suggested* nature of the prerequisite, not a strict requirement. Here’s a detailed explanation:
 
 **The Core Marking System: “Javaság” (Recommendation)**
 
@@ -398,8 +398,8 @@ Do you want me to:
 
 *   Provide an example of a specific course and its prerequisites?
 *   Explain the rationale behind using “Javaság” in this way?
-*   Help you find a specific course within the ELTE Faculty of Informatics curriculum?",116585,0.059,0.3777,,,True
-A_gemma3,gemma3:4b,False,6,What does Neptun do if I don't meet a strong prerequisite?,Neptun will automatically deregister you from the follow-up subject if you do not meet the strong prerequisite.,True,prerequisites,"Okay, let's break down what Neptun (the ELTE student information system) does if you don't meet a strong prerequisite for a course. It’s a crucial part of the process, so understanding it is important!
+*   Help you find a specific course within the ELTE Faculty of Informatics curriculum?",116585,0.059,0.3777,,,TRUE
+A_gemma3,gemma3:4b,FALSE,6,What does Neptun do if I don't meet a strong prerequisite?,Neptun will automatically deregister you from the follow-up subject if you do not meet the strong prerequisite.,TRUE,prerequisites,"Okay, let's break down what Neptun (the ELTE student information system) does if you don't meet a strong prerequisite for a course. It’s a crucial part of the process, so understanding it is important!
 
 Here’s a detailed explanation, based on how Neptun typically handles this situation at ELTE:
 
@@ -441,8 +441,8 @@ Do you want me to elaborate on any specific aspect of this, such as:
 
 *   How to find the course coordinator?
 *   What to say when you contact the coordinator?
-*   What happens if the coordinator doesn't respond?",205561,0.0309,0.3689,,,True
-A_gemma3,gemma3:4b,False,7,Can I register for a follow-up subject without completing its strong prerequisite?,No. You can only register for the follow-up subject after the strong prerequisite has been fulfilled and completed.,True,prerequisites,"Okay, let's address this question specifically for ELTE Faculty of Informatics students.
+*   What happens if the coordinator doesn't respond?",205561,0.0309,0.3689,,,TRUE
+A_gemma3,gemma3:4b,FALSE,7,Can I register for a follow-up subject without completing its strong prerequisite?,No. You can only register for the follow-up subject after the strong prerequisite has been fulfilled and completed.,TRUE,prerequisites,"Okay, let's address this question specifically for ELTE Faculty of Informatics students.
 
 **The short answer is: Generally, no, you cannot register for a follow-up subject without completing its strong prerequisite.**
 
@@ -475,8 +475,8 @@ Here’s a more detailed explanation, broken down based on ELTE Faculty of Infor
 **To help me give you even more targeted advice, could you tell me:**
 
 *   Which specific course are you trying to register for?
-*   Which course is the strong prerequisite for that course?",178520,0.0433,0.3848,,,False
-A_gemma3,gemma3:4b,False,8,"If I fail a weak prerequisite, does it count toward my subject registration limit?","No. If the follow-up subject cannot be passed due to a failed weak prerequisite, it will not be counted into the maximum 3 subject registrations per subject limit.",True,prerequisites,"Okay, let’s address this question specifically for ELTE Faculty of Informatics students regarding weak prerequisites and your subject registration limit.
+*   Which course is the strong prerequisite for that course?",178520,0.0433,0.3848,,,FALSE
+A_gemma3,gemma3:4b,FALSE,8,"If I fail a weak prerequisite, does it count toward my subject registration limit?","No. If the follow-up subject cannot be passed due to a failed weak prerequisite, it will not be counted into the maximum 3 subject registrations per subject limit.",TRUE,prerequisites,"Okay, let’s address this question specifically for ELTE Faculty of Informatics students regarding weak prerequisites and your subject registration limit.
 
 **The short answer is: Yes, failing a weak prerequisite *does* count towards your subject registration limit.**
 
@@ -499,8 +499,8 @@ Here’s a more detailed explanation based on the Faculty’s regulations:
 
 **Disclaimer:** *I am an AI assistant and cannot provide legal or official academic advice. This information is based on publicly available information and my understanding of the ELTE Faculty of Informatics regulations as of today’s date. Always refer to the official Faculty website and contact Student Services for the most accurate and current details.*
 
-Do you want me to help you find the specific section of the Faculty’s regulations that addresses this topic, or perhaps clarify a particular aspect of the rules?",115839,0.0492,0.391,,,True
-A_gemma3,gemma3:4b,False,9,What is the difference between strong and weak prerequisites?,Strong prerequisites must be completed before you can register for the follow-up subject. Weak prerequisites can be taken in the same semester but must be completed before passing the follow-up.,True,prerequisites,"Okay, let’s break down the difference between strong and weak prerequisites, a really important concept in course design and understanding dependencies in a curriculum, especially relevant for ELTE Faculty of Informatics students.
+Do you want me to help you find the specific section of the Faculty’s regulations that addresses this topic, or perhaps clarify a particular aspect of the rules?",115839,0.0492,0.391,,,TRUE
+A_gemma3,gemma3:4b,FALSE,9,What is the difference between strong and weak prerequisites?,Strong prerequisites must be completed before you can register for the follow-up subject. Weak prerequisites can be taken in the same semester but must be completed before passing the follow-up.,TRUE,prerequisites,"Okay, let’s break down the difference between strong and weak prerequisites, a really important concept in course design and understanding dependencies in a curriculum, especially relevant for ELTE Faculty of Informatics students.
 
 **The Core Idea:** Prerequisites are courses you *need* to take before you can successfully enroll in another course.  The *strength* of a prerequisite dictates how strictly that requirement is enforced.
 
@@ -542,8 +542,8 @@ Do you want me to:
 
 *   Give you more specific examples related to particular ELTE Informatics courses?
 *   Explain how prerequisites are used in course planning?
-*   Discuss the potential consequences of ignoring prerequisites?",148812,0.0614,0.3256,,,True
-A_gemma3,gemma3:4b,False,10,"If a subject has both a practical and a theoretical part with different codes, which is the weak prerequisite?",The practical subject is a weak prerequisite of the theoretical (exam) subject offered in the same semester.,True,prerequisites,"Okay, let’s break down the weak prerequisite concept in the context of ELTE Faculty of Informatics course codes.
+*   Discuss the potential consequences of ignoring prerequisites?",148812,0.0614,0.3256,,,TRUE
+A_gemma3,gemma3:4b,FALSE,10,"If a subject has both a practical and a theoretical part with different codes, which is the weak prerequisite?",The practical subject is a weak prerequisite of the theoretical (exam) subject offered in the same semester.,TRUE,prerequisites,"Okay, let’s break down the weak prerequisite concept in the context of ELTE Faculty of Informatics course codes.
 
 **In ELTE’s course management system, if a subject has *both* a practical and a theoretical part with different codes (e.g., “CS101” and “CS101-P”), the *theoretical* part is almost always the weak prerequisite.**
 
@@ -566,16 +566,16 @@ The practical part (like “CS101-P”) *builds upon* that theoretical knowledge
 Do you want me to elaborate on any specific aspect of this, such as:
 
 *   How prerequisites are visually represented in the course catalog?
-*   The difference between strong and weak prerequisites in more detail?",80916,0.0842,0.4286,,,True
-A_gemma3,gemma3:4b,False,11,Who is the Dean of ELTE Faculty of Informatics?,"Tamás Kozsik PhD, associate professor, is the Dean of ELTE Faculty of Informatics.",True,ELTE,"As of today, November 2, 2023, the Dean of the ELTE Faculty of Informatics is **Dr. Tamás Szarkicz** (Tamás Szarkicz, PhD).
+*   The difference between strong and weak prerequisites in more detail?",80916,0.0842,0.4286,,,TRUE
+A_gemma3,gemma3:4b,FALSE,11,Who is the Dean of ELTE Faculty of Informatics?,"Tamás Kozsik PhD, associate professor, is the Dean of ELTE Faculty of Informatics.",TRUE,ELTE,"As of today, November 2, 2023, the Dean of the ELTE Faculty of Informatics is **Dr. Tamás Szarkicz** (Tamás Szarkicz, PhD).
 
-You can find the most up-to-date information on the Faculty’s website: [https://inf.elte.hu/en/about/dean](https://inf.elte.hu/en/about/dean)",20704,0.2154,0.4545,,,False
-A_gemma3,gemma3:4b,False,12,What is the email address of the Dean?,The Dean's email address is dekan@inf.elte.hu.,True,ELTE,"As of today, November 2, 2023, the email address of the Dean of the Faculty of Informatics at ELTE is:
+You can find the most up-to-date information on the Faculty’s website: [https://inf.elte.hu/en/about/dean](https://inf.elte.hu/en/about/dean)",20704,0.2154,0.4545,,,FALSE
+A_gemma3,gemma3:4b,FALSE,12,What is the email address of the Dean?,The Dean's email address is dekan@inf.elte.hu.,TRUE,ELTE,"As of today, November 2, 2023, the email address of the Dean of the Faculty of Informatics at ELTE is:
 
 **dr. Szabó Zoltán** -  zoltan.szabo@i.elte.hu
 
-You can always find the most up-to-date contact information on the Faculty of Informatics website: [https://www.i.elte.hu/en/contact](https://www.i.elte.hu/en/contact)",20323,0.1714,0.439,,,True
-A_gemma3,gemma3:4b,False,13,What topics does the Computer Science BSc program cover?,"The Computer Science BSc covers algorithms, data structures, programming languages, software technology, web development, information systems, cryptography, cyber security, artificial intelligence, data science, robotics, Fintech, and quantum technologies.",True,ELTE,"Okay, here’s a breakdown of the topics covered in the ELTE Faculty of Informatics’ BSc (Bachelor of Science) Computer Science program. It’s a fairly comprehensive program designed to give you a strong foundation in the core areas of computing.  Keep in mind that the exact curriculum can evolve slightly from year to year, but this represents the core content as of late 2023/early 2024:
+You can always find the most up-to-date contact information on the Faculty of Informatics website: [https://www.i.elte.hu/en/contact](https://www.i.elte.hu/en/contact)",20323,0.1714,0.439,,,TRUE
+A_gemma3,gemma3:4b,FALSE,13,What topics does the Computer Science BSc program cover?,"The Computer Science BSc covers algorithms, data structures, programming languages, software technology, web development, information systems, cryptography, cyber security, artificial intelligence, data science, robotics, Fintech, and quantum technologies.",TRUE,ELTE,"Okay, here’s a breakdown of the topics covered in the ELTE Faculty of Informatics’ BSc (Bachelor of Science) Computer Science program. It’s a fairly comprehensive program designed to give you a strong foundation in the core areas of computing.  Keep in mind that the exact curriculum can evolve slightly from year to year, but this represents the core content as of late 2023/early 2024:
 
 **I. Core Foundations (Years 1 & 2):**
 
@@ -643,13 +643,13 @@ Do you want me to delve deeper into a specific area, such as:
 
 *   The programming languages used?
 *   The types of projects you might undertake?
-*   The specific electives available in a particular track (e.g., AI)?",196410,0.0509,0.2532,,,False
-A_gemma3,gemma3:4b,False,14,How many Erasmus partner universities does ELTE Faculty of Informatics have?,ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries.,True,ELTE,"As of today, November 2, 2023, the ELTE Faculty of Informatics has **16** officially recognized Erasmus+ partner universities. 
+*   The specific electives available in a particular track (e.g., AI)?",196410,0.0509,0.2532,,,FALSE
+A_gemma3,gemma3:4b,FALSE,14,How many Erasmus partner universities does ELTE Faculty of Informatics have?,ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries.,TRUE,ELTE,"As of today, November 2, 2023, the ELTE Faculty of Informatics has **16** officially recognized Erasmus+ partner universities. 
 
 You can find a complete and up-to-date list on the Faculty’s website here: [https://inf.elte.hu/en/erasmus](https://inf.elte.hu/en/erasmus)
 
-It’s always a good idea to double-check the website for the most current information, as partnerships can change.",23528,0.1772,0.38,,,False
-A_gemma3,gemma3:4b,False,15,What is the CEEPUS network at ELTE Faculty of Informatics?,ELTE Faculty of Informatics coordinates a CEEPUS network with 18 partner universities from 11 countries.,True,ELTE,"Okay, here’s a detailed explanation of the CEEPUS network and its connection to the ELTE Faculty of Informatics, tailored for ELTE Faculty of Informatics students:
+It’s always a good idea to double-check the website for the most current information, as partnerships can change.",23528,0.1772,0.38,,,FALSE
+A_gemma3,gemma3:4b,FALSE,15,What is the CEEPUS network at ELTE Faculty of Informatics?,ELTE Faculty of Informatics coordinates a CEEPUS network with 18 partner universities from 11 countries.,TRUE,ELTE,"Okay, here’s a detailed explanation of the CEEPUS network and its connection to the ELTE Faculty of Informatics, tailored for ELTE Faculty of Informatics students:
 
 **What is CEEPUS?**
 
@@ -695,8 +695,8 @@ Do you want me to delve deeper into a specific aspect of the CEEPUS network, suc
 *   Specific partner universities?
 *   The application process?
 *   Funding opportunities?
-*   Examples of joint research projects?",161863,0.0389,0.3755,,,False
-A_gemma3,gemma3:4b,False,16,What is the weather like in Budapest?,,False,,"Okay, here’s the weather information for Budapest as of November 8, 2023, at 11:18 AM CET, based on data from [https://www.accuweather.com/](https://www.accuweather.com/):
+*   Examples of joint research projects?",161863,0.0389,0.3755,,,FALSE
+A_gemma3,gemma3:4b,FALSE,16,What is the weather like in Budapest?,,FALSE,,"Okay, here’s the weather information for Budapest as of November 8, 2023, at 11:18 AM CET, based on data from [https://www.accuweather.com/](https://www.accuweather.com/):
 
 **Current Conditions:**
 
@@ -737,9 +737,9 @@ Do you want me to:
 
 *   Check the weather for a specific time in the future?
 *   Provide a longer-range forecast?
-*   Give you information about precipitation chances?",110152,,0.2701,False,,
-A_gemma3,gemma3:4b,False,17,Who won the FIFA World Cup in 2022?,,False,,Argentina won the FIFA World Cup in 2022! 🇦🇷🏆,8681,,0.3333,False,,
-A_gemma3,gemma3:4b,False,18,How do I cook pasta?,,False,,"Okay, let's get you cooking some perfect pasta! Here’s a breakdown of how to do it, tailored for an ELTE Informatics student – precise and efficient!
+*   Give you information about precipitation chances?",110152,,0.2701,FALSE,0,
+A_gemma3,gemma3:4b,FALSE,17,Who won the FIFA World Cup in 2022?,,FALSE,,Argentina won the FIFA World Cup in 2022! 🇦🇷🏆,8681,,0.3333,FALSE,0,
+A_gemma3,gemma3:4b,FALSE,18,How do I cook pasta?,,FALSE,,"Okay, let's get you cooking some perfect pasta! Here’s a breakdown of how to do it, tailored for an ELTE Informatics student – precise and efficient!
 
 **1. The Essentials:**
 
@@ -782,15 +782,15 @@ Do you want me to elaborate on a specific aspect, like:
 
 *   Different pasta shapes and their cooking times?
 *   Specific sauce pairings?
-*   Troubleshooting common pasta problems (e.g., sticky pasta)?",200631,,0.3261,False,,
-A_gemma3,gemma3:4b,False,19,What is the population of Hungary?,,False,,"As of today, November 2, 2023, the population of Hungary is approximately **9.7 million** people.
+*   Troubleshooting common pasta problems (e.g., sticky pasta)?",200631,,0.3261,FALSE,0,
+A_gemma3,gemma3:4b,FALSE,19,What is the population of Hungary?,,FALSE,,"As of today, November 2, 2023, the population of Hungary is approximately **9.7 million** people.
 
 Here's a breakdown of the most recent figures from reliable sources:
 
 *   **Hungarian Central Statistical Office (KSH):** Their latest estimate (as of October 1, 2023) puts the population at **9,689,962**.  [https://www.ksh.hu/en/](https://www.ksh.hu/en/)
 
-It’s important to note that population figures are constantly changing due to births, deaths, and migration. The KSH is the most authoritative source for Hungarian population data.",30901,,0.3836,False,,
-A_gemma3,gemma3:4b,False,20,Tell me a joke.,,False,,"Why did the programmer quit his job? 
+It’s important to note that population figures are constantly changing due to births, deaths, and migration. The KSH is the most authoritative source for Hungarian population data.",30901,,0.3836,FALSE,0,
+A_gemma3,gemma3:4b,FALSE,20,Tell me a joke.,,FALSE,,"Why did the programmer quit his job? 
 
 ... Because he didn't get arrays! 😄 
 
@@ -798,24 +798,24 @@ A_gemma3,gemma3:4b,False,20,Tell me a joke.,,False,,"Why did the programmer quit
 
 Hope that brought a little smile to your face! As an ELTE Informatics student, I figured a tech-related joke would be appropriate. 😊 
 
-Would you like to hear another one, or perhaps something related to computer science?",16465,,0.2115,False,,
-B_gemma3,gemma3:4b,True,1,What is a strong prerequisite?,A strong prerequisite must be completed before taking the follow-up subject. You cannot register for the follow-up until the prerequisite is fulfilled. Neptun will automatically deregister you if you do not meet it.,True,prerequisites,"According to the context, a strong prerequisite is a prerequisite without which the follow-up subject cannot be taken in the next semester, and the follow-up subject can only be registered for after the prerequisite subject has been fulfilled. It is also described as needing to be completed before taking the follow-up subject, and using the pyramid analogy to explain that you cannot register for or complete the follow-up subject until you have completed the prerequisite subject.",65135,0.3652,0.8553,,,True
-B_gemma3,gemma3:4b,True,2,What is a weak prerequisite?,"A weak prerequisite can be taken in the same semester as the follow-up subject, but must be completed before you can pass the follow-up. If not completed, your grade will automatically be failed even if you pass the exam.",True,prerequisites,"Weak prerequisites are marked as ‘weak’. Strong prerequisites are prerequisites without which the follow-up subject cannot be taken in the next semester, and the follow-up subject can only be registered for after the prerequisite subject has been fulfilled. The strong prerequisite must be completed before taking the follow-up subject. Weak prerequisites are requirements you must meet before taking certain subjects (follow-up subjects).",54218,0.3551,1.0,,,True
-B_gemma3,gemma3:4b,True,3,What happens if I pass the follow-up exam but fail the weak prerequisite?,"Your grade in the follow-up subject will automatically be failed or unfulfilled, even if you pass its exam.",True,prerequisites,"If not completed, your grade in the follow-up subject will automatically be failed/unfulfilled even if you pass its exam!",68499,0.9,1.0,,,True
-B_gemma3,gemma3:4b,True,4,How are strong prerequisites marked in the curriculum?,Strong prerequisites have no special annotation in the curriculum.,True,prerequisites,Strong prerequisites have no special annotation.,44602,0.8,0.8333,,,True
-B_gemma3,gemma3:4b,True,5,How are weak prerequisites marked in the curriculum?,Weak prerequisites are marked with the annotation 'weak' in the prerequisites column of the curriculum.,True,prerequisites,Weak prerequisites are marked as ‘weak’.,34231,0.4762,1.0,,,True
-B_gemma3,gemma3:4b,True,6,What does Neptun do if I don't meet a strong prerequisite?,Neptun will automatically deregister you from the follow-up subject if you do not meet the strong prerequisite.,True,prerequisites,Neptun will automatically deregister you from the subject if you do not meet this prerequisite. You will find the prerequisites for the subjects in the Prerequisites column of your curriculum; strong prerequisites have no special annotations.,52198,0.5926,1.0,,,True
-B_gemma3,gemma3:4b,True,7,Can I register for a follow-up subject without completing its strong prerequisite?,No. You can only register for the follow-up subject after the strong prerequisite has been fulfilled and completed.,True,prerequisites,"Yes, but the prerequisite is not fulfilled: You cannot register for the follow-up subject until you fulfil the prerequisite.",61719,0.4615,1.0,,,False
-B_gemma3,gemma3:4b,True,8,"If I fail a weak prerequisite, does it count toward my subject registration limit?","No. If the follow-up subject cannot be passed due to a failed weak prerequisite, it will not be counted into the maximum 3 subject registrations per subject limit.",True,prerequisites,"Yes, if you register for the follow-up subject, but you cannot pass it in a given semester due to a failed prerequisite, the follow-up subject will not be counted into the maximum 3 subject registrations/subject limit during your studies (regarding termination of student status).",66307,0.6316,0.9773,,,True
-B_gemma3,gemma3:4b,True,9,What is the difference between strong and weak prerequisites?,Strong prerequisites must be completed before you can register for the follow-up subject. Weak prerequisites can be taken in the same semester but must be completed before passing the follow-up.,True,prerequisites,"According to the context, strong prerequisites are prerequisites without which the follow-up subject cannot be taken in the next semester, and the follow-up subject can only be registered for after the prerequisite subject has been fulfilled. Weak prerequisites are marked as ‘weak’.",53948,0.3684,0.9524,,,True
-B_gemma3,gemma3:4b,True,10,"If a subject has both a practical and a theoretical part with different codes, which is the weak prerequisite?",The practical subject is a weak prerequisite of the theoretical (exam) subject offered in the same semester.,True,prerequisites,The practical subject (practice) is a weak prerequisite of the theoretical (exam) subject offered in the same semester.,47668,0.9714,1.0,,,True
-B_gemma3,gemma3:4b,True,11,Who is the Dean of ELTE Faculty of Informatics?,"Tamás Kozsik PhD, associate professor, is the Dean of ELTE Faculty of Informatics.",True,ELTE,"Dr. Zoltán Horváth is the Professor, Head of the Doctoral School of Informatics, which oversees the ELTE Faculty of Informatics.",71648,0.3889,0.8,,,False
-B_gemma3,gemma3:4b,True,12,What is the email address of the Dean?,The Dean's email address is dekan@inf.elte.hu.,True,ELTE,dekan@inf.elte.hu,66123,0.5714,1.0,,,True
-B_gemma3,gemma3:4b,True,13,What topics does the Computer Science BSc program cover?,"The Computer Science BSc covers algorithms, data structures, programming languages, software technology, web development, information systems, cryptography, cyber security, artificial intelligence, data science, robotics, Fintech, and quantum technologies.",True,ELTE,"The BSc in Computer Science training is 6 semesters long and provides a general overview of the world of Informatics: the practice of programming, software engineering, and the appropriate mathematical and theoretical background.",51437,0.1967,1.0,,,False
-B_gemma3,gemma3:4b,True,14,How many Erasmus partner universities does ELTE Faculty of Informatics have?,ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries.,True,ELTE,The ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries and coordinates a CEEPUS network with 18 partner universities from 11 countries.,78472,0.6667,0.8846,,,False
-B_gemma3,gemma3:4b,True,15,What is the CEEPUS network at ELTE Faculty of Informatics?,ELTE Faculty of Informatics coordinates a CEEPUS network with 18 partner universities from 11 countries.,True,ELTE,The context does not contain any information about the CEEPUS network at ELTE Faculty of Informatics.,69788,0.2581,0.5625,,,False
-B_gemma3,gemma3:4b,True,16,What is the weather like in Budapest?,,False,,"The context does not provide specific weather information about Budapest. It describes Hungary's climate in general, including hot, dry summers and snowy winters, and mentions that the weather is warmest from May to September.",70966,,0.7353,False,,
-B_gemma3,gemma3:4b,True,17,Who won the FIFA World Cup in 2022?,,False,,The context does not contain information about the FIFA World Cup in 2022.,46570,,0.4615,False,,
-B_gemma3,gemma3:4b,True,18,How do I cook pasta?,,False,,The provided context does not contain information about how to cook pasta. It focuses on enrolment procedures at ELTE.,71238,,0.4737,False,,
-B_gemma3,gemma3:4b,True,19,What is the population of Hungary?,,False,,The population of Hungary is less than 10 million including several minorities.,42850,,1.0,False,,
-B_gemma3,gemma3:4b,True,20,Tell me a joke.,,False,,"The context does not contain any jokes. It provides phrases in Hungarian, academic regulations, research group information, and course descriptions.",110578,,0.35,False,,
+Would you like to hear another one, or perhaps something related to computer science?",16465,,0.2115,FALSE,0,
+B_gemma3,gemma3:4b,TRUE,1,What is a strong prerequisite?,A strong prerequisite must be completed before taking the follow-up subject. You cannot register for the follow-up until the prerequisite is fulfilled. Neptun will automatically deregister you if you do not meet it.,TRUE,prerequisites,"According to the context, a strong prerequisite is a prerequisite without which the follow-up subject cannot be taken in the next semester, and the follow-up subject can only be registered for after the prerequisite subject has been fulfilled. It is also described as needing to be completed before taking the follow-up subject, and using the pyramid analogy to explain that you cannot register for or complete the follow-up subject until you have completed the prerequisite subject.",65135,0.3652,0.8553,,,TRUE
+B_gemma3,gemma3:4b,TRUE,2,What is a weak prerequisite?,"A weak prerequisite can be taken in the same semester as the follow-up subject, but must be completed before you can pass the follow-up. If not completed, your grade will automatically be failed even if you pass the exam.",TRUE,prerequisites,"Weak prerequisites are marked as ‘weak’. Strong prerequisites are prerequisites without which the follow-up subject cannot be taken in the next semester, and the follow-up subject can only be registered for after the prerequisite subject has been fulfilled. The strong prerequisite must be completed before taking the follow-up subject. Weak prerequisites are requirements you must meet before taking certain subjects (follow-up subjects).",54218,0.3551,1,,,TRUE
+B_gemma3,gemma3:4b,TRUE,3,What happens if I pass the follow-up exam but fail the weak prerequisite?,"Your grade in the follow-up subject will automatically be failed or unfulfilled, even if you pass its exam.",TRUE,prerequisites,"If not completed, your grade in the follow-up subject will automatically be failed/unfulfilled even if you pass its exam!",68499,0.9,1,,,TRUE
+B_gemma3,gemma3:4b,TRUE,4,How are strong prerequisites marked in the curriculum?,Strong prerequisites have no special annotation in the curriculum.,TRUE,prerequisites,Strong prerequisites have no special annotation.,44602,0.8,0.8333,,,TRUE
+B_gemma3,gemma3:4b,TRUE,5,How are weak prerequisites marked in the curriculum?,Weak prerequisites are marked with the annotation 'weak' in the prerequisites column of the curriculum.,TRUE,prerequisites,Weak prerequisites are marked as ‘weak’.,34231,0.4762,1,,,TRUE
+B_gemma3,gemma3:4b,TRUE,6,What does Neptun do if I don't meet a strong prerequisite?,Neptun will automatically deregister you from the follow-up subject if you do not meet the strong prerequisite.,TRUE,prerequisites,Neptun will automatically deregister you from the subject if you do not meet this prerequisite. You will find the prerequisites for the subjects in the Prerequisites column of your curriculum; strong prerequisites have no special annotations.,52198,0.5926,1,,,TRUE
+B_gemma3,gemma3:4b,TRUE,7,Can I register for a follow-up subject without completing its strong prerequisite?,No. You can only register for the follow-up subject after the strong prerequisite has been fulfilled and completed.,TRUE,prerequisites,"Yes, but the prerequisite is not fulfilled: You cannot register for the follow-up subject until you fulfil the prerequisite.",61719,0.4615,1,,,FALSE
+B_gemma3,gemma3:4b,TRUE,8,"If I fail a weak prerequisite, does it count toward my subject registration limit?","No. If the follow-up subject cannot be passed due to a failed weak prerequisite, it will not be counted into the maximum 3 subject registrations per subject limit.",TRUE,prerequisites,"Yes, if you register for the follow-up subject, but you cannot pass it in a given semester due to a failed prerequisite, the follow-up subject will not be counted into the maximum 3 subject registrations/subject limit during your studies (regarding termination of student status).",66307,0.6316,0.9773,,,TRUE
+B_gemma3,gemma3:4b,TRUE,9,What is the difference between strong and weak prerequisites?,Strong prerequisites must be completed before you can register for the follow-up subject. Weak prerequisites can be taken in the same semester but must be completed before passing the follow-up.,TRUE,prerequisites,"According to the context, strong prerequisites are prerequisites without which the follow-up subject cannot be taken in the next semester, and the follow-up subject can only be registered for after the prerequisite subject has been fulfilled. Weak prerequisites are marked as ‘weak’.",53948,0.3684,0.9524,,,TRUE
+B_gemma3,gemma3:4b,TRUE,10,"If a subject has both a practical and a theoretical part with different codes, which is the weak prerequisite?",The practical subject is a weak prerequisite of the theoretical (exam) subject offered in the same semester.,TRUE,prerequisites,The practical subject (practice) is a weak prerequisite of the theoretical (exam) subject offered in the same semester.,47668,0.9714,1,,,TRUE
+B_gemma3,gemma3:4b,TRUE,11,Who is the Dean of ELTE Faculty of Informatics?,"Tamás Kozsik PhD, associate professor, is the Dean of ELTE Faculty of Informatics.",TRUE,ELTE,"Dr. Zoltán Horváth is the Professor, Head of the Doctoral School of Informatics, which oversees the ELTE Faculty of Informatics.",71648,0.3889,0.8,,,FALSE
+B_gemma3,gemma3:4b,TRUE,12,What is the email address of the Dean?,The Dean's email address is dekan@inf.elte.hu.,TRUE,ELTE,dekan@inf.elte.hu,66123,0.5714,1,,,TRUE
+B_gemma3,gemma3:4b,TRUE,13,What topics does the Computer Science BSc program cover?,"The Computer Science BSc covers algorithms, data structures, programming languages, software technology, web development, information systems, cryptography, cyber security, artificial intelligence, data science, robotics, Fintech, and quantum technologies.",TRUE,ELTE,"The BSc in Computer Science training is 6 semesters long and provides a general overview of the world of Informatics: the practice of programming, software engineering, and the appropriate mathematical and theoretical background.",51437,0.1967,1,,,FALSE
+B_gemma3,gemma3:4b,TRUE,14,How many Erasmus partner universities does ELTE Faculty of Informatics have?,ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries.,TRUE,ELTE,The ELTE Faculty of Informatics has more than 60 Erasmus partners in 20 countries and coordinates a CEEPUS network with 18 partner universities from 11 countries.,78472,0.6667,0.8846,,,FALSE
+B_gemma3,gemma3:4b,TRUE,15,What is the CEEPUS network at ELTE Faculty of Informatics?,ELTE Faculty of Informatics coordinates a CEEPUS network with 18 partner universities from 11 countries.,TRUE,ELTE,The context does not contain any information about the CEEPUS network at ELTE Faculty of Informatics.,69788,0.2581,0.5625,,,FALSE
+B_gemma3,gemma3:4b,TRUE,16,What is the weather like in Budapest?,,FALSE,,"The context does not provide specific weather information about Budapest. It describes Hungary's climate in general, including hot, dry summers and snowy winters, and mentions that the weather is warmest from May to September.",70966,,0.7353,FALSE,1,
+B_gemma3,gemma3:4b,TRUE,17,Who won the FIFA World Cup in 2022?,,FALSE,,The context does not contain information about the FIFA World Cup in 2022.,46570,,0.4615,FALSE,1,
+B_gemma3,gemma3:4b,TRUE,18,How do I cook pasta?,,FALSE,,The provided context does not contain information about how to cook pasta. It focuses on enrolment procedures at ELTE.,71238,,0.4737,FALSE,1,
+B_gemma3,gemma3:4b,TRUE,19,What is the population of Hungary?,,FALSE,,The population of Hungary is less than 10 million including several minorities.,42850,,1,FALSE,0,
+B_gemma3,gemma3:4b,TRUE,20,Tell me a joke.,,FALSE,,"The context does not contain any jokes. It provides phrases in Hungarian, academic regulations, research group information, and course descriptions.",110578,,0.35,FALSE,1,

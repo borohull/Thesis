@@ -8,13 +8,13 @@ This chapter covers testing and evaluation of the ELTE IK Assistant. It begins w
 \section{Functional Testing}
 \label{sec:testing-functional}
 
-End-to-end functional tests verify that all API endpoints respond correctly and that the full data pipeline produces consistent results. Tests cover the \texttt{/health} endpoint returning the correct Ollama status, the \texttt{/chat} endpoint returning a well-formed JSON response with an answer and source list, the \texttt{/upload} endpoint correctly chunking and embedding a submitted file, and the incremental ingestion pipeline producing an identical ChromaDB state when run twice on the same corpus. Automated functional testing is planned as future work; the results reported in Section~\ref{sec:testing-system} were verified manually against the running system.
+
 
 % ─────────────────────────────────────────────────────────────
 \section{User Evaluation}
 \label{sec:testing-user}
 
-A user evaluation would assess whether the target audience — ELTE Faculty of Informatics students — can operate the system successfully and receive answers they find useful. Participants would be given a set of representative tasks (finding a prerequisite, checking exam rules, uploading a personal document) and asked to complete them using the web interface. The evaluation would measure task completion rate, subjective answer quality on a Likert scale, and perceived response time acceptability. A think-aloud protocol would surface usability issues not visible in the quantitative metrics. Conducting this evaluation with a representative sample of students is identified as future work.
+
 
 % ─────────────────────────────────────────────────────────────
 \section{System Evaluation}
@@ -84,9 +84,9 @@ Table~\ref{tab:eval-summary} reports the per-configuration averages across all 2
         \textbf{ID} & \textbf{Model} & \textbf{ROUGE-L} & \textbf{Faithfulness} & \textbf{Refusal} & \textbf{Hit-rate} & \textbf{Avg time} \\
         \hline\hline
         A1 & llama3.2:3b, no RAG & 0.117 & 0.377 & 0.00 & 0.667 & 47.6 s \\
-        B1 & llama3.2:3b, RAG    & 0.436 & 0.711 & 0.20 & 0.667 & 70.5 s \\
+        B1 & llama3.2:3b, RAG    & 0.436 & 0.711 & 0.60 & 0.667 & 70.5 s \\
         A2 & gemma3:4b,   no RAG & 0.078 & 0.355 & 0.00 & 0.667 & 121.1 s \\
-        B2 & gemma3:4b,   RAG    & 0.534 & 0.844 & 0.00 & 0.667 & 61.4 s \\
+        B2 & gemma3:4b,   RAG    & 0.534 & 0.844 & 0.80 & 0.667 & 61.4 s \\
         \hline
     \end{tabular}
     \caption{Evaluation results averaged over 20 test questions. Hit-rate is computed over in-scope questions only (15 questions); refusal rate is computed over out-of-scope questions only (5 questions).}
@@ -116,9 +116,9 @@ The retrieval hit-rate is 0.667 (10 out of 15 in-scope questions) and is identic
 
 \subsection{Out-of-Scope Refusal}
 
-Neither baseline model refuses any out-of-scope question: both A1 and A2 answer all five irrelevant queries confidently, generating plausible but entirely off-topic responses. Among the RAG configurations, \texttt{llama3.2:3b} with RAG (B1) refuses 1 out of 5 out-of-scope questions (20\%), triggered by the prompt instruction to answer only from provided context when no relevant chunks are retrieved. \texttt{gemma3:4b} with RAG (B2) does not refuse any out-of-scope question despite receiving the same prompt instruction, choosing instead to answer from its parametric knowledge when context is absent.
+Neither baseline model refuses any out-of-scope question: both A1 and A2 answer all five irrelevant queries confidently, generating plausible but entirely off-topic responses. Among the RAG configurations, refusal rates are substantially higher based on manual review of the outputs. \texttt{llama3.2:3b} with RAG (B1) correctly refuses 3 out of 5 out-of-scope questions (60\%), and \texttt{gemma3:4b} with RAG (B2) refuses 4 out of 5 (80\%). In both cases the refusal is triggered by the prompt instruction to answer only from provided context: when no relevant chunks are retrieved, the model recognises the absence of grounding material and declines to answer rather than falling back on parametric knowledge.
 
-This is a notable safety gap: the RAG prompt template reduces but does not eliminate hallucination on out-of-scope inputs, and its effectiveness depends on the model.
+RAG therefore has a clear secondary benefit beyond answer quality: it substantially improves the system's ability to decline out-of-scope questions. However, neither RAG configuration reaches 100\% refusal, and the no-RAG baselines offer no protection at all, confirming that the prompt-level mechanism alone is not fully reliable.
 
 \subsection{Response Latency}
 

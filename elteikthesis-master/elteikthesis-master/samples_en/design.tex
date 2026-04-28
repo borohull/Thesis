@@ -62,6 +62,66 @@ Figure~\ref{fig:architecture} illustrates the high-level data flow between these
 The strict separation between the offline and online pipelines is a deliberate consequence of the offline-operation requirement (R-NF-1): once the vector index is built, the serving layer never reads from disk beyond the ChromaDB query and needs no network access.
 
 % ─────────────────────────────────────────────────────────────
+% ─────────────────────────────────────────────────────────────
+\section{Technology Choice}
+\label{sec:design-techchoice}
+
+The system was developed and tested on a personal laptop running Windows~11
+with 8~GB of RAM and no dedicated GPU. Beyond the hardware, a core requirement
+was that no user query or document ever leave the local machine, which ruled
+out cloud-hosted language model APIs. These two constraints — limited memory
+and strict data locality — drove every component choice toward tools that are
+lightweight, run in-process, and require no external services.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{| m{0.20\textwidth} | m{0.20\textwidth} | m{0.50\textwidth} |}
+\hline
+\textbf{Concern} & \textbf{Choice} & \textbf{Reason} \\
+\hline
+Language model serving & Ollama &
+    Preferred over running a raw \texttt{llama.cpp} binary because it exposes a
+    stable REST API, handles model quantisation and memory mapping automatically,
+    and makes switching models a one-line change in \texttt{settings.py}. \\
+\hline
+Language model & Llama~3.2~(3B) / Gemma~3~(4B) &
+    The 8~GB RAM constraint rules out larger models at 16-bit precision.
+    Both models use 4-bit quantisation, reducing their footprint to
+    approximately 2--2.5~GB and leaving sufficient headroom for the OS,
+    embedding model, and vector store. \\
+\hline
+Embeddings & all-MiniLM-L6-v2 &
+    A compact sentence transformer that produces 384-dimensional vectors and
+    runs efficiently on CPU without a dedicated GPU. Although larger embedding
+    models exist, this model offers a strong accuracy-to-resource trade-off
+    for English factual retrieval tasks. \\
+\hline
+Vector store & ChromaDB &
+    Runs in-process with no separate server, persists to a plain directory,
+    and supports cosine-similarity search out of the box. This satisfies the
+    offline-operation requirement with minimal operational overhead. \\
+\hline
+Backend framework & FastAPI &
+    Asynchronous Python framework with automatic OpenAPI documentation,
+    built-in static file serving, and low boilerplate. Well suited to
+    wrapping a single RAG pipeline as a REST API. \\
+\hline
+Interaction log & SQLite &
+    The application runs on a single machine and log volume is modest.
+    SQLite requires no separate server process and stores the entire
+    database in a single portable file. \\
+\hline
+Frontend & Vanilla JS &
+    A framework-free single HTML file eliminates a build step and all
+    Node.js dependencies, keeping deployment as simple as copying a file
+    into \texttt{app/static/}. \\
+\hline
+\end{tabular}
+\caption{Technology stack and rationale for each choice.}
+\label{tab:stack}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
 \section{Component Design}
 \label{sec:design-components}
 
@@ -70,13 +130,13 @@ The strict separation between the offline and online pipelines is a deliberate c
 
     \item \textbf{Ingestion and Chunking:} receives raw files from the Crawler and applies format-specific loaders (PyMuPDF for PDFs, BeautifulSoup for HTML, python-docx for DOCX) to extract clean text. The text is split into overlapping 800-character chunks with a 150-character overlap using a recursive character splitter. Each chunk carries metadata (source path, file type, page number, chunk identifier) and is written to \texttt{data/processed/chunks.json} for the Embedding component.
 
-    \item \textbf{Embedding Model and Vector Store:} the \texttt{all-MiniLM-L6-v2} sentence-transformer~\cite{reimers2019sbert} encodes each chunk into a 384-dimensional vector. The model occupies approximately 90~MB and runs entirely on CPU. Vectors are stored in a ChromaDB collection named \texttt{elte\_ik} using cosine similarity, persisted to \texttt{data/processed/chroma\_db/}. ChromaDB was selected because it runs in-process with no separate server and persists to a plain directory, satisfying the offline-operation requirement. The Vector Store is the boundary between the offline pipeline and the online serving layer.
+    \item \textbf{Embedding Model and Vector Store:} the \texttt{all-MiniLM-L6-v2} sentence-transformer~\cite{reimers2019sbert} encodes each chunk into a 384-dimensional vector. The model occupies approximately 90~MB and runs entirely on CPU. Vectors are stored in a ChromaDB collection named \texttt{elte\_ik} using cosine similarity, persisted to \texttt{data/processed/chroma\_db/}. The Vector Store is the boundary between the offline pipeline and the online serving layer.
 
     \item \textbf{RAG Module:} the core of the online pipeline. At query time it encodes the user's question with the same \texttt{all-MiniLM-L6-v2} model (mandatory — a model mismatch produces wrong retrieval results), retrieves the top-$k$ most similar chunks from ChromaDB by cosine similarity, assembles them into a grounded prompt that instructs the LLM to answer only from the provided context, and forwards the prompt to the Language Model. Both the ChromaDB client and the embedding model are initialised once at server startup as singletons, eliminating per-request load overhead.
 
     \item \textbf{FastAPI Backend:} exposes the RAG pipeline over HTTP. The \texttt{POST /chat} endpoint calls the RAG Module and logs the result; \texttt{GET /health} reports whether Ollama is reachable; additional endpoints handle session management and user-uploaded documents. Static files (the single-page UI) are served from \texttt{app/static/} via FastAPI's \texttt{StaticFiles} mount.
 
-    \item \textbf{Chat Logging:} every request–response pair is persisted to a SQLite database (\texttt{data/logs/chat\_logs.db}). The schema records the session identifier, user message, assistant answer, source file list, response time, and timestamp. Logging supports both retrospective quality analysis and the session sidebar in the UI. SQLite was chosen because it requires no separate process and stores its data in a single portable file.
+    \item \textbf{Chat Logging:} every request–response pair is persisted to a SQLite database (\texttt{data/logs/chat\_logs.db}). The schema records the session identifier, user message, assistant answer, source file list, response time, and timestamp. Logging supports both retrospective quality analysis and the session sidebar in the UI.
 
     \item \textbf{Frontend:} a single self-contained HTML file with embedded CSS and vanilla JavaScript served by the FastAPI backend. It communicates with the backend exclusively via REST and holds no local copy of the vector index or the language model. The framework-free design eliminates a build step and reduces operational complexity.
 \end{itemize}

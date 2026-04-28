@@ -9,7 +9,6 @@ This section describes the full implementation of the ELTE IK Assistant across i
 \subsection{Setup and Deployment}
 \label{subsec:impl-setup}
 
-The application is designed to run on a single personal computer without a GPU.
 Table~\ref{tab:sys-req} lists the minimum system requirements.
 
 \begin{table}[H]
@@ -106,12 +105,10 @@ curl http://localhost:8000/health
 A successful response is \texttt{\{"status": "ok", "ollama": true\}}. If \texttt{"ollama": false} appears, Ollama is not running or the selected model has not been pulled.
 
 % ─────────────────────────────────────────────────────────────
-\subsection{System Overview}
+\subsection{Central Configuration}
 \label{sec:impl-overview}
 
-The application follows a clean pipeline architecture in which each stage feeds its output directly into the next. A user types a question into the browser-based chat interface. The FastAPI backend receives this message and passes it to the retrieval module, which queries a ChromaDB vector database to find the most relevant text chunks from the ELTE documents. Those chunks are assembled into a prompt, which is forwarded to a locally running Llama~3.2 (3B) model served by Ollama. The model generates an answer that is returned to the user together with references to the source documents.
-
-The main configuration values used throughout the application are centralised in a single settings module so that they can be changed in one place without touching any business logic.
+All tunable parameters are centralised in a single settings module so that they can be changed in one place without touching any business logic.
 
 \lstset{caption={Central configuration (\texttt{app/settings.py})}, label=src:settings}
 \begin{lstlisting}[language=Python]
@@ -132,8 +129,6 @@ OLLAMA_MODEL    = "llama3.2:3b"
 TEMPERATURE     = 0.1
 TIMEOUT_S       = 120
 \end{lstlisting}
-
-The low temperature value (0.1) is deliberate: the chatbot is expected to give factual, consistent answers from official faculty documents rather than creative or varied responses.
 
 % ─────────────────────────────────────────────────────────────
 \subsection{Data Collection and Ingestion}
@@ -250,7 +245,7 @@ With the text broken into chunks, the next step is to convert each chunk into a 
 
 \subsubsection{Embedding Model}
 
-The chosen model is \texttt{all-MiniLM-L6-v2}, a compact sentence transformer from the Sentence-Transformers library. It produces 384-dimensional vectors and runs efficiently on CPU, which is important for local deployment without a dedicated GPU. Although larger embedding models exist, this model offers a very good accuracy-to-resource trade-off for English factual retrieval tasks.
+The chosen model is \texttt{all-MiniLM-L6-v2}, a compact sentence transformer from the Sentence-Transformers library that produces 384-dimensional vectors.
 
 \lstset{caption={Embedding pipeline class (\texttt{02\_embedding.ipynb})}, label=src:embedding}
 \begin{lstlisting}[language=Python]
@@ -508,7 +503,6 @@ con.execute("""
 
 The \texttt{chat\_logs} table links each message to a \texttt{session\_id}, enabling per-session history retrieval. The \texttt{sessions} table stores one row per conversation — its title (the first 60 characters of the opening message) and timestamps — so the sidebar can list sessions without scanning the full message log. The \texttt{uploads} table records every user-uploaded file alongside its SHA-256 digest and the number of chunks produced, providing an audit trail for the live document ingestion feature.
 
-SQLite was chosen because the application runs on a single machine, the log volume is modest, and SQLite requires no separate database server process.
 
 % ─────────────────────────────────────────────────────────────
 \subsection{Frontend}

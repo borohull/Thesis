@@ -31,3 +31,5 @@ data/processed/chroma_db/
 # Data
 data/raw/
 data/processed/
+data/logs/
+data/uploads/
