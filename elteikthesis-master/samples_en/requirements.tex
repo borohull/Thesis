@@ -2,7 +2,12 @@
 \chapter{Software Requirements}
 \label{ch:requirements}
 
-The system must run fully offline on commodity student hardware, require no cloud services, and answer faculty-related questions from a locally indexed document corpus.
+This chapter defines what the ELTE IK Assistant must do and under what constraints it
+must operate. The functional requirements describe the capabilities the system exposes
+to the user. The non-functional requirements define the resource, privacy, latency, and
+reliability constraints that any correct implementation must satisfy. Interaction logging
+and the offline data pipeline are internal system concerns and do not appear as
+user-facing requirements.
 
 % ─────────────────────────────────────────────────────────────
 \section{Functional Requirements}
@@ -15,22 +20,48 @@ The system must run fully offline on commodity student hardware, require no clou
     \label{fig:use-case}
 \end{figure}
 
-The primary interactions within the system are illustrated in Figure~\ref{fig:use-case}. The main functional capabilities include:
+Figure~\ref{fig:use-case} illustrates the primary interactions between the user and the
+system. The single actor is the \textbf{User}, representing any student or staff member
+accessing the assistant through the browser interface. Asking a question is the central
+use case: it always includes receiving a grounded answer with source references, and
+optionally extends to selecting a language model before submitting. Document upload
+always includes indexing the uploaded file into the vector store. Viewing session history
+optionally extends to continuing or deleting an existing session.
 
 \begin{itemize}
-    \item \textbf{Natural language querying:} the system accepts a free-text English question and returns a textual answer with source citations. When the answer is absent from the indexed documents, the system must say so explicitly.
+    \item[\textbf{R-F-1}] \textbf{Natural language querying:} the system accepts a
+        free-text English question and returns a textual answer with source citations.
+        When the answer is absent from the indexed documents, the system must say so
+        explicitly rather than generating an unsupported response.
 
-    \item \textbf{Document ingestion:} the pipeline loads HTML, PDF, and DOCX files, cleans and chunks the text, and persists the result for the embedding step. Only new or modified files are re-processed, detected via content hash.
+    \item[\textbf{R-F-2}] \textbf{Model selection:} the user may select which language
+        model handles the current query. The system must apply the selected model to all
+        subsequent queries in the session without requiring a restart.
 
-    \item \textbf{Embedding and retrieval:} each chunk is encoded into a dense vector and stored in a local persistent vector database. At query time the top-$K$ most similar chunks are retrieved; $K$ is configurable.
+    \item[\textbf{R-F-3}] \textbf{Document upload:} the user may upload a document
+        that is immediately chunked, embedded, and added to the vector store, making
+        its contents available for retrieval in the same session.
 
-    \item \textbf{Answer generation:} retrieved chunks are assembled into a prompt that constrains the model to answer only from provided context. Inference runs locally with no external API calls.
+    \item[\textbf{R-F-4}] \textbf{Embedding and retrieval:} each chunk is encoded into
+        a dense vector and stored in a local persistent vector database. At query time
+        the top-$K$ most similar chunks are retrieved; $K$ is configurable.
 
-    \item \textbf{REST API:} the backend exposes a \texttt{/health} endpoint reporting system status and a \texttt{/chat} endpoint that accepts a message and returns the answer with source references.
+    \item[\textbf{R-F-5}] \textbf{Session history:} the system persists conversation
+        history across page reloads. The user may view past sessions, continue a
+        previous session, or delete a session entirely.
 
-    \item \textbf{Web interface:} a browser-based chat UI displays conversation history, source file names, model availability, and inline error messages.
+    \item[\textbf{R-F-6}] \textbf{System information:} the user may view the current
+        system status, including model availability and vector store state, without
+        submitting a query.
 
-    \item \textbf{Interaction logging:} every interaction is recorded to a local database, including the query, answer, sources, response time, and any errors, to support offline evaluation.
+    \item[\textbf{R-F-7}] \textbf{REST API:} the backend exposes a \texttt{/health}
+        endpoint reporting system status and a \texttt{/chat} endpoint that accepts a
+        message and returns the answer with source references. Both endpoints must be
+        usable independently of the browser interface.
+
+    \item[\textbf{R-F-8}] \textbf{Web interface:} a browser-based chat UI displays
+        conversation history, source file names, model availability, and inline error
+        messages without requiring any installation on the client side.
 \end{itemize}
 
 % ─────────────────────────────────────────────────────────────
@@ -38,15 +69,36 @@ The primary interactions within the system are illustrated in Figure~\ref{fig:us
 \label{sec:req-nonfunctional}
 
 \begin{itemize}
-    \item \textbf{Privacy:} no query, chunk, or answer may leave the local machine. The system must remain fully functional in a network-isolated environment after initial setup.
+    \item[\textbf{R-NF-1}] \textbf{Privacy:} no query, chunk, or answer may leave the
+        local machine. The system must remain fully functional in a network-isolated
+        environment after initial setup.
 
-    \item \textbf{Resource constraints:} the system must run on 8~GB RAM with no discrete GPU, using a quantised (4-bit or 8-bit) language model and a CPU-friendly embedding model.
+    \item[\textbf{R-NF-2}] \textbf{Resource constraints:} the system must run on 8~GB
+        RAM with no discrete GPU, using a quantised (4-bit or 8-bit) language model and
+        a CPU-friendly embedding model.
 
-    \item \textbf{Response latency:} end-to-end response time must not exceed 90~seconds on the reference hardware. Embedding and retrieval complete in under one second; generation typically takes 30--80~seconds on CPU.
+    \item[\textbf{R-NF-3}] \textbf{Response latency:} end-to-end response time must
+        not exceed 90~seconds on the reference hardware. Embedding and retrieval must
+        complete in under one second; generation typically takes 30--80~seconds on CPU.
 
-    \item \textbf{Offline operation:} after the initial model pull and corpus crawl, no network connection is required. All subsequent pipeline steps run entirely from local storage.
+    \item[\textbf{R-NF-4}] \textbf{Offline operation:} after the initial model pull
+        and corpus crawl, no network connection is required. All subsequent pipeline
+        steps run entirely from local storage.
 
-    \item \textbf{Reliability:} if the language model process is unavailable, \texttt{/health} must report it and \texttt{/chat} must return an HTTP~503. The vector store and log database must not be corrupted on unexpected shutdown, and re-running the pipeline must be idempotent.
+    \item[\textbf{R-NF-5}] \textbf{Reliability:} if the language model process is
+        unavailable, \texttt{/health} must report it and \texttt{/chat} must return an
+        HTTP~503. The vector store and log database must not be corrupted on unexpected
+        shutdown, and re-running the pipeline must be idempotent.
 
-    \item \textbf{Configurability:} all tunable parameters — model names, $K$, temperature, paths, timeouts — are defined in a single configuration module. Swapping models requires only a one-line change there; changing the embedding model additionally requires rebuilding the vector store.
+    \item[\textbf{R-NF-6}] \textbf{Configurability:} all tunable parameters — model
+        names, $K$, temperature, paths, timeouts — are defined in a single
+        configuration module. Swapping models requires only a one-line change there;
+        changing the embedding model additionally requires rebuilding the vector store.
+
+    \item[\textbf{R-NF-7}] \textbf{Deployability:} the system must be deployable on
+        a faculty server without modification to the application code. All components
+        are containerised with Docker, so that moving from a local prototype to a live
+        university service requires infrastructure provisioning only — configuring
+        ports, paths, and model names — with no changes to any other part of the
+        codebase.
 \end{itemize}
