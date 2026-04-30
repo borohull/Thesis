@@ -3,13 +3,14 @@
 \label{ch:intro}
 
 % ─────────────────────────────────────────────────────────────
-\section{Motivation and Background}
+\section{Motivation}
 \label{sec:intro-motivation}
 
 Students and staff at the Faculty of Informatics of Eötvös Loránd University face a recurring practical challenge: finding accurate, up-to-date answers to questions about the curriculum. Which courses must be completed before enrolling in a given subject? What are the rules for repeating a failed exam? How does the Neptun system handle course registration? The answers to these questions exist — scattered across faculty web pages, downloadable PDF regulations, DOCX course descriptions, and administrative guidelines — but locating the right document, navigating to the right section, and extracting a clear answer can take considerably longer than it should.
 
 General-purpose search engines return ranked lists of pages; they do not synthesise an answer from multiple sources or understand the specific terminology of Hungarian higher education. As the volume of documentation grows each semester and more information migrates to sub-pages that are hard to discover by browsing, the gap between the information that exists and the information that students can efficiently find continues to widen.
 
+\section{Background}
 \paragraph{Large Language Models.}
 Large language models are neural networks trained on vast text corpora to generate coherent, contextually appropriate text~\cite{brown2020gpt3}. Despite broad capabilities, they exhibit three limitations directly relevant to this project: a fixed knowledge cutoff that excludes documents published after training, a tendency to hallucinate plausible but incorrect facts~\cite{lewis2020rag}, and an inability to process an entire document corpus within a single prompt.
 
@@ -44,7 +45,7 @@ AI-powered chatbots are increasingly deployed in higher education~\cite{edtech20
 These systems share a common profile: cloud infrastructure, institution-wide scale, and dedicated IT teams with substantial budgets. This thesis occupies a different point in the design space. Where the systems above are cloud-based and large-scale, this project is local and lightweight. Where they trade data privacy for ease of access, this project keeps every query and document on a single machine with no external dependencies. The goal is not to rival the feature breadth of a university-wide platform, but to demonstrate that a privacy-safe, low-cost RAG chatbot is practical for a single faculty with no dedicated infrastructure.
 
 % ─────────────────────────────────────────────────────────────
-\section{Overview of the Solution}
+\section{Objective}
 \label{sec:intro-overview}
 
 The system built in this thesis is a locally deployed RAG chatbot that answers natural language questions about the ELTE Faculty of Informatics curriculum. It is designed for privacy, offline operation, and low resource usage. Its key capabilities are:
