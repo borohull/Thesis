@@ -22,7 +22,7 @@ application, and the storage model used to persist data.
 The ELTE IK Assistant is organised as three layers:
 
 \begin{enumerate}
-    \item \textbf{Data pipeline} — a standalone crawler downloads
+    \item \textbf{Data pipeline} — a standalone crawler script downloads
     raw documents from the ELTE websites; a separate ingestion and embedding
     pipeline cleans, chunks, and encodes those documents into vector embeddings,
     then stores them in a local vector database. This pipeline is run once by
@@ -92,66 +92,45 @@ disk reads are ChromaDB queries and SQLite log operations.
 \label{sec:design-decisions}
 
 \paragraph{Local LLM via Ollama.}
-Running the language model locally is the single most consequential
-architectural decision. It satisfies the privacy requirement — no query or
-document ever leaves the machine — and the offline requirement, since no
-internet connection is needed at inference time. The cost is significantly
-higher latency compared with a cloud API: on the development hardware,
-median response times range from 48 to 121 seconds depending on the model.
-This trade-off was accepted as unavoidable given the constraints; a cloud
-API would have violated both requirements regardless of its performance.
+Running the language model locally satisfies both the privacy requirement ---
+no query or document ever leaves the machine --- and the offline requirement.
+The cost is higher latency: on the development hardware, median response times
+range from 25 to 180 seconds depending on the model. This trade-off was
+unavoidable given the constraints.
 
 \paragraph{Model selection.}
-\texttt{llama3.2:3b} and \texttt{gemma3:4b} were selected as the two
-leading instruction-tuned open-weight models in the sub-5B parameter range
-available through Ollama at the time of development. The 8~GB RAM constraint
-rules out 7B+ parameter models at 16-bit precision ($\approx$14~GB); both
-evaluated models use 4-bit quantisation, reducing their footprint to
-approximately 2~GB and 2.5~GB respectively, leaving sufficient headroom for
+\texttt{llama3.2:3b} and \texttt{gemma3:4b} were selected as the leading
+instruction-tuned open-weight models in the sub-5B parameter range available
+through Ollama. The 8~GB RAM constraint rules out 7B+ models at 16-bit
+precision ($\approx$14~GB); both evaluated models use 4-bit quantisation,
+reducing their footprint to approximately 2~GB and 2.5~GB respectively, leaving sufficient headroom for
 the embedding model, ChromaDB index, and operating system. Both models also
 support instruction-following out of the box, which is necessary for the
 grounded-answer prompt to work reliably.
 
 \paragraph{Chunking strategy.}
-Source documents are split into 800-character chunks with a 150-character
-overlap. The chunk size was chosen empirically as a practical balance: large
-enough to contain a complete thought or regulation clause, yet small enough
-for the embedding model to encode with high fidelity and for three chunks to
-fit comfortably within the LLM context window alongside the prompt template.
-The 150-character overlap ensures that information near a chunk boundary
-appears in both adjacent chunks, so no sentence is silently dropped at a
-split point.
+Documents are split into 800-character chunks with a 150-character overlap.
+This size is large enough to contain a complete regulation clause yet small
+enough for accurate embedding. The overlap ensures no sentence is silently
+dropped at a split boundary.
 
 \paragraph{Top-$k$ retrieval.}
-The evaluation in Chapter~\ref{ch:testing} was conducted at $k = 5$.
-The production default was subsequently set to $k = 3$ to reduce inference
-latency on CPU-only hardware: each additional retrieved chunk lengthens the
-prompt and increases generation time, and the evaluation demonstrated that
-retrieval quality was already strong at $k = 5$, so reducing to $k = 3$ is a
-conservative latency trade-off with minimal impact on answer quality. At
-800 characters per chunk, three chunks contribute approximately 2400
+Evaluation was conducted at $k = 5$; the production default was set to
+$k = 3$ to reduce inference latency on CPU-only hardware, with minimal
+impact on answer quality. At 800 characters per chunk, three chunks contribute approximately 2400
 characters of context — well within the context window of both evaluated
 models.
 
 \paragraph{Temperature.}
-A near-zero temperature of 0.1 makes the language model near-deterministic
-and biased toward its highest-probability completions. For a factual
-question-answering assistant this is desirable: users expect consistent,
-precise answers rather than creative variation. The value was set to 0.1
-rather than exactly 0 to avoid degenerate repetition loops that were observed
-during development at temperature zero, where some models produce
-near-infinite sequences of repeated tokens.
+A temperature of 0.1 makes the model near-deterministic, which is
+appropriate for a factual assistant. Exactly 0 was avoided due to
+degenerate repetition loops observed during development.
 
 \paragraph{Containerisation with Docker.}
-Docker Compose packages the entire stack — FastAPI, Ollama, and all
-dependencies — into isolated containers that run identically regardless of
-the host environment. This directly satisfies the deployability requirement:
-moving from a local machine to a faculty server requires only infrastructure
-provisioning, with no changes to application code. The trade-off is added
-complexity for single-machine users, who must install Docker Desktop and
-accept a longer first-run time while models are downloaded and the knowledge
-base is built. This cost was considered acceptable because the manual setup
-path remains available as an alternative for users who prefer it.
+Docker Compose packages the entire stack into isolated containers, directly
+satisfying the deployability requirement: moving to a faculty server requires
+only infrastructure provisioning with no code changes. The manual setup path
+remains available for single-machine users.
 
 % ─────────────────────────────────────────────────────────────
 \subsection{Component Design}
@@ -174,55 +153,43 @@ cluttering the arrows, but it applies to every module listed below.
 \textbf{Data pipeline scripts.} Two scripts build the knowledge base and
 are never imported by the serving layer at runtime.
 \begin{itemize}
-    \item \textbf{Crawler} (\texttt{scripts/crawler.py}) performs a
-    resumable breadth-first traversal of the ELTE Faculty of Informatics
-    website. It downloads HTML pages, PDFs, and DOCX files into
-    \texttt{data/raw/}, computes a SHA-256 digest of each file, and records
-    it in a manifest so that subsequent runs only re-download changed files.
+    \item \textbf{Crawler} (\texttt{scripts/crawler.py}) --- breadth-first
+    crawl of the ELTE websites; downloads HTML, PDF, and DOCX files into
+    \texttt{data/raw/} and maintains a SHA-256 manifest for resumable runs
+    (see Section~\ref{sec:impl-sha256}). Re-running the crawler is safe:
+    unchanged files are skipped automatically.
 
     \item \textbf{Build index} (\texttt{scripts/build\_index.py}) reads the
     raw files produced by the crawler, applies format-specific loaders to
     extract clean text, splits the text into overlapping chunks, encodes
-    each chunk with \texttt{all-MiniLM-L6-v2}, and upserts the resulting
-    vectors into ChromaDB. It uses the same SHA-256 manifest to process
-    only new or changed files incrementally.
+    each chunk with \texttt{all-MiniLM-L6-v2} (see Section~\ref{sec:impl-embedding-model}), and
+    upserts the vectors into ChromaDB incrementally. Only new or changed
+    files are re-processed on each run.
 \end{itemize}
 
 \textbf{Serving layer modules.} The following five modules are loaded when
 the FastAPI process starts and handle all runtime activity.
 \begin{itemize}
-    \item \textbf{settings} (\texttt{app/settings.py}) defines every
-    tunable constant — paths, model names, retrieval parameters, and
-    timeouts — in one place. No business logic lives here; all other modules
-    import from it so that a single edit propagates everywhere.
+    \item \textbf{settings} (\texttt{app/settings.py}) --- all tunable
+    constants in one place; no business logic. Every other module imports
+    from it, so a single edit propagates everywhere.
 
-    \item \textbf{rag} (\texttt{app/rag.py}) is the core of the serving
-    layer. It initialises the ChromaDB client, the ChromaDB collection,
-    and the \texttt{all-MiniLM-L6-v2} embedding model as module-level
-    singletons at import time, so they are loaded from disk once and reused
-    on every request. At query time \texttt{rag\_query()} encodes the
-    user's question, retrieves the top-$k$ most similar chunks from
-    ChromaDB, assembles a grounded prompt, calls Ollama, and returns the
-    answer with source references.
+    \item \textbf{rag} (\texttt{app/rag.py}) --- core pipeline: encodes the
+    query, retrieves top-$k$ chunks, builds the prompt, calls Ollama, and
+    returns the answer with source references. The embedding model and
+    ChromaDB client are held as singletons, loaded once at startup.
 
-    \item \textbf{ingest} (\texttt{app/ingest.py}) handles live document
-    ingestion for user-uploaded files. It applies the same loaders and
-    chunking logic used by the data pipeline, then upserts the new
-    embeddings directly into the running ChromaDB collection so that
-    uploaded documents are available for retrieval immediately, without a
-    server restart.
+    \item \textbf{ingest} (\texttt{app/ingest.py}) --- chunks and embeds
+    user-uploaded files directly into the live ChromaDB collection, making
+    them available for retrieval immediately without a server restart.
 
-    \item \textbf{logger} (\texttt{app/logger.py}) owns the SQLite
-    database. It initialises the three-table schema on first run and exposes
-    functions for recording chat interactions, managing sessions, and
-    logging uploaded files. It is the only module that reads from or writes
-    to the database.
+    \item \textbf{logger} (\texttt{app/logger.py}) --- owns the SQLite
+    database; the only module that reads from or writes to it. Records chat
+    interactions, sessions, and uploads.
 
-    \item \textbf{main} (\texttt{app/main.py}) is the FastAPI application
-    entry point. It wires the HTTP endpoints to the other modules, mounts
-    the static frontend files, and applies CORS middleware. It contains no
-    business logic of its own — each endpoint delegates immediately to
-    \texttt{rag}, \texttt{ingest}, or \texttt{logger}.
+    \item \textbf{main} (\texttt{app/main.py}) --- FastAPI entry point;
+    wires HTTP endpoints to the other modules and mounts the static frontend.
+    It contains no business logic of its own.
 \end{itemize}
 
 % ─────────────────────────────────────────────────────────────

@@ -9,6 +9,10 @@ The online serving layer --- retrieval, answer generation, and the HTTP API
 starting with project structure and configuration before covering each
 phase in turn.
 
+All development and testing was performed on the machine specified in
+Table~\ref{tab:dev-machine}, which matches the target hardware profile
+defined in the resource constraint (R-NF-2).
+
 % ─────────────────────────────────────────────────────────────
 
 \begin{table}[H]
@@ -306,7 +310,7 @@ surviving chunk is assigned a \texttt{chunk\_id} of the form
 \texttt{<source\_relative>::chunk\_N}.
 
 \subsubsection{Incremental Ingestion with SHA-256 Manifest}
-
+\label{sec:impl-sha256}
 Re-processing all 482 source files from scratch on every run would be
 wasteful. \texttt{build\_index.py} therefore maintains a manifest at
 \texttt{data/processed/manifest.json} recording a content hash, chunk
@@ -350,7 +354,7 @@ content even when the user's phrasing differs from the exact wording in the
 source document.
 
 \subsubsection{Embedding Model}
-
+\label{sec:impl-embedding-model}
 The chosen model is \texttt{all-MiniLM-L6-v2}, a compact sentence transformer
 that produces 384-dimensional vectors and runs efficiently on CPU.
 \texttt{build\_index.py} encodes all chunks in a single batched call:

@@ -37,6 +37,7 @@
 \addbibresource{elteikthesis.bib}
 
 \usepackage{graphicx}
+\usepackage{pdfpages}
 \usepackage[table]{xcolor}
 % UTF-8 support and Unicode box-drawing characters in listings
 \usepackage[utf8]{inputenc}
@@ -54,7 +55,7 @@
 % Title page (mandatory)
 \maketitle
 % Topic declaration page (mandatory) - can also be attached instead
-%\includepdf{topicdeclaration.pdf}
+\includepdf{UlziibayarBorokhul(PRUA5W).pdf}
 
 % Table of contents (mandatory)
 \tableofcontents
@@ -78,6 +79,10 @@
 \cleardoublepage
 
 \input{samples_en/conclusion.tex}
+\cleardoublepage
+
+\appendix
+\input{samples_en/appendix.tex}
 \cleardoublepage
 
 % Bibliography (mandatory)

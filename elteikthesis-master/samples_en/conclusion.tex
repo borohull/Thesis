@@ -1,70 +1,120 @@
 \chapter{Conclusion}
 \label{ch:sum}
 
-This thesis has presented the design, implementation, and empirical evaluation of a locally deployed retrieval-augmented generation chatbot for the ELTE Faculty of Informatics. The system allows students and staff to ask natural-language questions about the curriculum, course prerequisites, exam rules, and Neptun registration procedures, and receive answers grounded in official faculty documents — without sending any data to an external server.
+This thesis has presented the design, implementation, and empirical evaluation
+of a locally deployed retrieval-augmented generation chatbot for the ELTE
+Faculty of Informatics, enabling students and staff to ask natural-language
+questions about curriculum, prerequisites, exam rules, and Neptun procedures
+without sending any data to an external server.
 
 % ─────────────────────────────────────────────────────────────
 \section{Summary of Contributions}
 \label{sec:sum-contributions}
 
-The thesis has delivered the following concrete artefacts and findings.
-
 \paragraph{Document collection and ingestion pipeline.}
-A resumable breadth-first crawler collects HTML pages, PDF documents, and DOCX files from the faculty's public web presence. An incremental ingestion pipeline maintains a SHA-256 manifest so that only new or changed files need to be reprocessed on subsequent runs, reducing re-indexing cost to a fraction of a full rebuild. The resulting corpus of 482 source files is chunked into 6112 overlapping text segments and stored in a ChromaDB vector index.
+A resumable breadth-first crawler and an incremental ingestion pipeline with
+SHA-256 change detection built a 6112-chunk ChromaDB index from 482 faculty
+documents, ensuring that subsequent runs only reprocess new or modified files.
 
 \paragraph{Offline RAG pipeline.}
-Each chunk is encoded into a 384-dimensional dense vector by the \texttt{all-MiniLM-L6-v2} sentence embedding model. At query time the top-3 most similar chunks are retrieved by cosine similarity and assembled into a structured prompt that instructs the language model to answer only from the provided context. The entire pipeline runs on a standard laptop with 8~GB of RAM and no GPU.
+Query responses are grounded in the index using \texttt{all-MiniLM-L6-v2}
+embeddings and top-5 cosine retrieval. The entire pipeline runs on a standard
+laptop without GPU acceleration or any external network dependency at inference
+time.
 
 \paragraph{Local language model serving.}
-Two quantised local models — \texttt{llama3.2:3b} and \texttt{gemma3:4b} — are served by Ollama. No query, no retrieved document chunk, and no generated answer leaves the host machine at any point during inference, satisfying the privacy and offline-operation requirements that motivated the project.
+Two quantised local models --- \texttt{llama3.2:3b} and \texttt{gemma3:4b} ---
+are served via Ollama at 4-bit quantisation. No query, retrieved chunk, or
+generated answer leaves the host machine during inference.
 
 \paragraph{Production-quality backend and frontend.}
-A FastAPI backend exposes the RAG pipeline through a minimal REST API, logs every interaction to a local SQLite database, and serves a browser-based chat interface styled to match the faculty's visual identity. The frontend supports session history, model switching, session deletion, and per-answer source references.
+A FastAPI backend exposes the pipeline through a REST API, logs interactions to
+a local SQLite database, and serves a browser-based chat interface matching the
+faculty's visual identity. A 16-case end-to-end test suite verified the full
+request path from API layer to Ollama inference; all tests passed.
 
 \paragraph{Empirical evaluation.}
-A 20-question benchmark — 15 in-scope faculty questions and 5 out-of-scope control questions — was run across all four configurations. The results establish that RAG is the decisive factor in answer quality: ROUGE-L increases by 3.7$\times$ for \texttt{llama3.2:3b} and by 6.9$\times$ for \texttt{gemma3:4b} when retrieval context is added. Source faithfulness nearly doubles in both cases. The best-performing configuration, \texttt{gemma3:4b} with RAG, achieves ROUGE-L 0.534 and faithfulness 0.844, and produces shorter, more focused answers that also reduce average response latency relative to the no-RAG Gemma baseline.
+A 20-question benchmark across four configurations confirmed that RAG is the
+decisive factor in answer quality. ROUGE-L improves by $2.5\times$ for
+\texttt{llama3.2:3b} and $4.7\times$ for \texttt{gemma3:4b} when retrieval
+context is added. The best configuration, \texttt{gemma3:4b} with RAG, achieves
+ROUGE-L 0.357, semantic similarity 0.778, and a perfect out-of-scope refusal
+rate of 100\%.
 
 % ─────────────────────────────────────────────────────────────
 \section{Reflection on Goals}
 \label{sec:sum-reflection}
 
-The system meets the two primary goals stated in Chapter~\ref{ch:intro}.
+The system meets its two primary goals. All computation runs on the local
+machine with no external network dependency after the initial model download,
+satisfying the offline-operation requirement. With RAG, both models produce
+answers substantially more faithful to faculty source documents than their
+no-RAG baselines, which have no parametric knowledge of ELTE-specific rules.
+The retrieval step achieves a hit-rate of 0.933, confirming that the vector
+index reliably surfaces relevant content.
 
-\textbf{Privacy.} All computation — embedding, retrieval, and generation — occurs on the local machine. There is no network dependency after the initial model download, and no user query reaches any external service. This satisfies the GDPR-motivated offline-operation requirement.
-
-\textbf{Domain grounding.} Without RAG, neither evaluated model reliably answers ELTE-specific questions: they have no parametric knowledge of faculty prerequisite rules or Neptun registration procedures. With RAG, both models produce answers that are substantially more accurate and faithful to the source documents. The system successfully bridges the gap between what the language models know in general and what the faculty documents say specifically.
-
-The 30-second response latency target (NF-4) was not met: all four configurations exceed it on CPU-only hardware, with median times ranging from 47 to 121 seconds. This is a known consequence of running billion-parameter models on a laptop without GPU acceleration, and is noted as a deployment constraint rather than an architectural failure.
+The 30-second latency target (NF-4) was not met on CPU-only hardware. Mean
+response times range from 41.5 to 66.9 seconds across the two RAG
+configurations, and \texttt{gemma3:4b} without RAG reaches 157 seconds ---
+effectively unusable. This is a hardware constraint rather than an
+architectural failure, and is addressed in the future work below.
 
 % ─────────────────────────────────────────────────────────────
 \section{Limitations}
 \label{sec:sum-limitations}
 
-Three limitations are worth restating clearly.
+\paragraph{Retrieval ceiling.}
+The hit-rate of 0.933 leaves one in fifteen questions without the most relevant
+chunk. The single miss --- Q14, on Stipendium Hungaricum and Erasmus
+eligibility --- suggests the chunking strategy does not represent shallow
+navigation text well. A cross-encoder re-ranking step is the most direct
+remedy.
 
-\textbf{Retrieval ceiling.} The embedding-based retrieval achieves a hit-rate of 0.667, meaning one in three in-scope questions is answered without the most relevant chunk. The missed questions concern topics whose source content appears in shallow navigation text that is not well-represented after chunking. Improving chunking strategy or adding a re-ranking step is the highest-leverage improvement available.
+\paragraph{Out-of-scope refusal reliability.}
+The prompt-level refusal mechanism has a known gap: \texttt{llama3.2:3b} with
+RAG answered Q19 because a population figure appeared incidentally in a
+retrieved chunk, providing apparent grounding for an off-topic response. A
+retrieval-score threshold below which the system returns a fixed refusal would
+close this gap more robustly than prompt engineering alone.
 
-\textbf{Out-of-scope refusal.} Neither baseline model refuses any out-of-scope question; both answer all five irrelevant queries confidently without retrieval context. Among the RAG configurations, manual review of outputs shows that \texttt{llama3.2:3b} with RAG correctly refuses 3 out of 5 out-of-scope questions (60\%) and \texttt{gemma3:4b} with RAG refuses 4 out of 5 (80\%). The prompt-level instruction to answer only from provided context is therefore the primary driver of refusal behaviour — but it is not fully reliable. A more robust mechanism — such as a retrieval-score threshold below which the system returns a fixed ``I don't know'' response — is needed for a production deployment.
-
-\textbf{Benchmark scale.} The 20-question test set is small and skewed toward prerequisite rules. A broader evaluation covering scholarships, exam appeals, credit transfer, and admissions would give a more complete picture of system performance.
+\paragraph{Benchmark scale.}
+The 20-question test set is skewed toward prerequisite rules and credit
+requirements. Topics such as exam appeals, credit transfer, and dormitory
+applications are not represented, limiting the generalisability of the
+evaluation results.
 
 % ─────────────────────────────────────────────────────────────
 \section{Future Work}
 \label{sec:sum-future}
 
-Several directions could extend the system beyond its current scope.
-
-\paragraph{Improved retrieval.}
-Replacing the fixed top-$k$ retrieval with a cross-encoder re-ranker would improve chunk selection precision without changing the embedding index. Hybrid retrieval — combining dense vector search with a sparse BM25 index — is a well-established technique for handling exact-match queries (course codes, regulation numbers) that embedding models handle less reliably than semantic queries.
+\paragraph{University-wide deployment.}
+The system is architecturally ready for deployment beyond a single laptop. On
+shared faculty hardware with a mid-range GPU, a larger 7B-parameter model
+would bring latency well within the 30-second target while improving answer
+quality. Deployment at the university level would also raise the question of
+corpus governance: the current SQLite-backed document store and ChromaDB index
+would need to be replaced or augmented with a managed database that supports
+access control, scheduled re-crawls, and version-tracked document updates. A
+lightweight administration interface for adding new sources, retiring outdated
+pages, and triggering incremental re-indexing would be a prerequisite for
+sustainable operation at that scale.
 
 \paragraph{Retrieval-score threshold for refusal.}
-A simple and robust out-of-scope detector would compare the cosine similarity of the top retrieved chunk against a calibrated threshold. If no chunk clears the threshold the system returns a fixed refusal response rather than forwarding a contentless prompt to the language model. This would eliminate the model-dependent refusal inconsistency observed in the evaluation.
+Comparing the cosine similarity of the top retrieved chunk against a calibrated
+threshold would provide a robust, model-independent refusal mechanism,
+eliminating the inconsistency observed with \texttt{llama3.2:3b} and the
+incidental-match edge case that caused it to answer Q19.
 
-\paragraph{Larger model on shared hardware.}
-The latency constraint is a hardware constraint, not a software one. If the system were deployed on a faculty server with a mid-range GPU (e.g.\ NVIDIA RTX 3060, 12~GB VRAM), a 7B-parameter model could run at sub-10-second latency, bringing the system well within the original 30-second target while further improving answer quality.
+\paragraph{Improved retrieval.}
+A cross-encoder re-ranker or hybrid BM25 + dense retrieval would improve
+precision on exact-match queries such as course codes and regulation numbers
+that embedding models handle less reliably than semantic queries.
 
 \paragraph{Multilingual support.}
-The faculty serves students who write questions in Hungarian as well as English. Replacing \texttt{all-MiniLM-L6-v2} with a multilingual sentence encoder (e.g.\ \texttt{paraphrase-multilingual-MiniLM-L12-v2}) and a multilingual instruction-tuned model would extend the system to Hungarian-language queries without re-indexing the corpus.
+Replacing \texttt{all-MiniLM-L6-v2} with a multilingual sentence encoder would
+extend the system to Hungarian-language queries without re-indexing the corpus.
 
 \paragraph{User feedback loop.}
-The SQLite interaction log provides a natural foundation for a feedback mechanism: users could mark an answer as helpful or unhelpful. Aggregated feedback could be used to identify retrieval failures, surface low-quality chunks for manual review, and prioritise document updates in the corpus.
+The SQLite interaction log provides a natural foundation for a feedback
+mechanism. Aggregated helpfulness ratings could identify retrieval failures,
+surface low-quality chunks, and prioritise document updates.

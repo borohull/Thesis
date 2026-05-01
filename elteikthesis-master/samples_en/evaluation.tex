@@ -1,22 +1,35 @@
 % !TEX root = ../elteikthesis_en.tex
-\chapter{Testing}
+\chapter{Testing and Evaluation}
 \label{ch:testing}
 
-This chapter covers testing and evaluation of the ELTE IK Assistant. It begins with functional testing of the API endpoints and pipeline, then presents an empirical system evaluation across four model and retrieval configurations, and concludes with a user evaluation section.
+This chapter covers testing and evaluation of the ELTE IK Assistant. It begins
+with functional testing of the API endpoints and pipeline, then presents an
+empirical system evaluation across four model and retrieval configurations.
 
 % ─────────────────────────────────────────────────────────────
 \section{Functional Testing}
 \label{sec:testing-functional}
 
-The project includes an end-to-end test suite located in the \texttt{tests/} directory. Tests are written using \texttt{pytest} and interact with the live system over HTTP — there are no mocks — so they exercise the full request path from the API layer through ChromaDB retrieval to Ollama inference.
+The project includes an end-to-end test suite located in the \texttt{tests/}
+directory. Tests are written using \texttt{pytest} and interact with the live
+system over HTTP --- there are no mocks --- so they exercise the full request
+path from the API layer through ChromaDB retrieval to Ollama inference.
 
 \subsection*{Test Architecture}
 
-All tests are tagged with the \texttt{@pytest.mark.e2e} marker, which keeps them separate from any future unit tests and allows selective execution. A session-scoped \texttt{warm\_up\_model} fixture fires one dummy \texttt{/chat} request before the first test runs, loading the LLM into RAM so that individual tests do not time out during model initialisation. Two further session-scoped fixtures --- \texttt{live\_server} and \texttt{ollama\_up} --- check the \texttt{/health} endpoint and skip the entire session with an actionable message if the server or Ollama is not reachable.
+All tests are tagged with the \texttt{@pytest.mark.e2e} marker, which keeps
+them separate from any future unit tests and allows selective execution. A
+session-scoped \texttt{warm\_up\_model} fixture fires one dummy \texttt{/chat}
+request before the first test runs, loading the LLM into RAM so that individual
+tests do not time out during model initialisation. Two further session-scoped
+fixtures --- \texttt{live\_server} and \texttt{ollama\_up} --- check the
+\texttt{/health} endpoint and skip the entire session with an actionable message
+if the server or Ollama is not reachable.
 
 \subsection*{Coverage}
 
-Table~\ref{tab:e2e-tests} summarises the endpoints and behaviours verified by the suite.
+Table~\ref{tab:e2e-tests} summarises the endpoints and behaviours verified by
+the suite.
 
 \begin{table}[H]
     \centering
@@ -61,37 +74,44 @@ Table~\ref{tab:e2e-tests} summarises the endpoints and behaviours verified by th
     \label{tab:e2e-tests}
 \end{table}
 
-Because LLM output is non-deterministic, no test asserts exact answer text; all assertions target response structure, status codes, and field types. All 16 test cases passed on the reference hardware configuration running \texttt{llama3.2:3b} via Ollama.
+Because LLM output is non-deterministic, no test asserts exact answer text;
+all assertions target response structure, status codes, and field types. All 16
+test cases passed on the reference hardware configuration running
+\texttt{llama3.2:3b} via Ollama.
 
 \subsection*{Running the Tests}
 
-Before running the suite the following prerequisites must be met: Ollama must be running (\texttt{ollama serve}), the target model must be pulled (\texttt{ollama pull llama3.2:3b}), and the FastAPI server must be started (\texttt{uvicorn app.main:app -{}-reload}). The suite is then executed with:
+Before running the suite the following prerequisites must be met: Ollama must
+be running (\texttt{ollama serve}), the target model must be pulled
+(\texttt{ollama pull llama3.2:3b}), and the FastAPI server must be started
+(\texttt{uvicorn app.main:app -{}-reload}). The suite is then executed with:
 
 \begin{lstlisting}[language=bash]
 python -m pytest tests
 \end{lstlisting}
 
-If the server or Ollama is not available, all tests are automatically skipped rather than failed, and the skip message states the exact command needed to resolve the issue.
-
-% ─────────────────────────────────────────────────────────────
-\section{User Evaluation}
-\label{sec:testing-user}
-
-
+If the server or Ollama is not available, all tests are automatically skipped
+rather than failed, and the skip message states the exact command needed to
+resolve the issue.
 
 % ─────────────────────────────────────────────────────────────
 \section{System Evaluation}
 \label{sec:testing-system}
 
-The following sections present an empirical evaluation of the system across four configurations, measuring answer quality, faithfulness to retrieved source material, out-of-scope refusal behaviour, retrieval effectiveness, and response latency. The goal is to quantify how much value the RAG component adds over a plain language model baseline, and to compare the two evaluated local models under both conditions.
+The following sections present an empirical evaluation of the system across
+four configurations, measuring answer quality, out-of-scope refusal behaviour,
+retrieval effectiveness, and response latency. The goal is to quantify how much
+value the RAG component adds over a plain language model baseline, and to
+compare the two evaluated local models under both conditions.
 
 % ─────────────────────────────────────────────────────────────
 \subsection{Evaluation Setup}
 \label{sec:eval-setup}
 
-\subsection*{Configurations}
+\subsubsection*{Configurations}
 
-Four configurations were evaluated in a factorial design crossing two models with two retrieval modes:
+Four configurations were evaluated in a factorial design crossing two models
+with two retrieval modes:
 
 \begin{table}[H]
     \centering
@@ -100,131 +120,259 @@ Four configurations were evaluated in a factorial design crossing two models wit
         \textbf{ID} & \textbf{Model} & \textbf{RAG} & \textbf{Description} \\
         \hline\hline
         A1 & \texttt{llama3.2:3b} & No  & Baseline: model knowledge only \\
-        B1 & \texttt{llama3.2:3b} & Yes & RAG with top-3 chunk retrieval \\
+        B1 & \texttt{llama3.2:3b} & Yes & RAG with top-5 chunk retrieval \\
         A2 & \texttt{gemma3:4b}   & No  & Baseline: model knowledge only \\
-        B2 & \texttt{gemma3:4b}   & Yes & RAG with top-3 chunk retrieval \\
+        B2 & \texttt{gemma3:4b}   & Yes & RAG with top-5 chunk retrieval \\
         \hline
     \end{tabular}
     \caption{The four evaluation configurations.}
     \label{tab:eval-configs}
 \end{table}
 
-Both models were run locally via Ollama with 4-bit quantisation and temperature 0.1. No internet access was used during evaluation.
+Both models were run locally via Ollama with 4-bit quantisation and temperature
+0.1. No internet access was used during evaluation.
 
-\subsection*{Test Set}
+\subsubsection*{Test Set}
 
-The test set consists of 20 questions divided into two categories:
+The test set consists of 20 questions divided into two categories.
 
-\begin{itemize}
-    \item \textbf{15 in-scope questions} about topics present in the crawled ELTE documents: course prerequisite rules (strong and weak), Neptun registration behaviour, faculty staff information, the Computer Science BSc programme, and international partnerships. These questions have a definite correct answer that can be verified against the source documents.
-    \item \textbf{5 out-of-scope questions} with no connection to the faculty corpus: general knowledge (\emph{Who won the FIFA World Cup in 2022?}), weather, cooking, geography, and humour. These questions measure whether the system correctly declines to answer rather than hallucinating.
-\end{itemize}
+\textbf{15 in-scope questions} covering topics present in the crawled ELTE
+documents: course prerequisite rules, semester status definitions, financial
+support, student card eligibility, housing, emergency contacts, the Stipendium
+Hungaricum scholarship, exam registration rules, BSc credit requirements,
+Erasmus eligibility, and health insurance. Each question has a reference answer
+written manually by consulting the source documents directly.
 
-Reference answers for in-scope questions were written manually by consulting the source documents. Each question was run through all four configurations independently; the model received no memory of previous questions.
+\textbf{5 out-of-scope questions} with no connection to the faculty corpus:
+current weather, a sports result, cooking instructions, national population
+statistics, and a movie recommendation. These measure whether the system
+correctly declines to answer rather than generating an unsupported response.
 
-\subsection*{Metrics}
+Each question was run through all four configurations independently with no
+shared conversation history between questions. The full list of questions,
+categories, and reference answers is provided in Appendix~\ref{app:testset}.
+
+\subsubsection*{Metrics}
 
 \begin{description}
-    \item[ROUGE-L] The longest-common-subsequence F1 score between the generated answer and the reference answer~\cite{lin2004rouge}. Captures lexical overlap with the ground truth on a scale from 0 to 1.
-    \item[Faithfulness] The proportion of words in the generated answer that appear in the retrieved chunks. A high faithfulness score indicates the model is drawing on the provided context rather than confabulating.
-    \item[Refusal rate] For out-of-scope questions only: the fraction of queries for which the model produced a non-answer (e.g.\ \emph{I don't know} or \emph{This is outside my knowledge}). Higher is better for this category.
-    \item[Retrieval hit-rate] For RAG configurations: the fraction of in-scope questions for which at least one of the retrieved chunks came from the expected source document. Measures the quality of the embedding-based retrieval independently of the language model.
-    \item[Response time] Wall-clock latency from request to complete response, measured in milliseconds on a laptop with 8~GB RAM and no GPU.
+    \item[ROUGE-L] The longest-common-subsequence F1 score between the
+        generated answer and the reference answer~\cite{lin2004rouge}. Captures
+        lexical overlap with the ground truth on a scale from 0 to 1. Computed
+        on in-scope questions only.
+
+    \item[Semantic similarity] Cosine similarity between the embedding of the
+        reference answer and the embedding of the generated answer, computed
+        using the same \texttt{all-MiniLM-L6-v2} model used for retrieval.
+        Addresses ROUGE-L's main weakness: a correct answer phrased differently
+        still scores well. Computed on in-scope questions only.
+
+    \item[Refusal rate] The fraction of out-of-scope questions for which the
+        model produced a non-answer. Detected automatically using a phrase list;
+        higher is better for this category.
+
+    \item[Retrieval hit-rate] For RAG configurations: the fraction of in-scope
+        questions for which at least one retrieved chunk came from the expected
+        source document. Measures retrieval quality independently of the
+        language model. Because retrieval depends only on the embedding model
+        and vector index, this value is identical across all four configurations.
+
+    \item[Response latency] Wall-clock time from request to complete response,
+        measured in seconds on the reference hardware with no GPU.
 \end{description}
+
+\subsubsection*{Hardware}
+
+All runs were performed on the development machine whose specifications are
+listed in Table~\ref{tab:dev-machine}. No GPU acceleration was used; all
+inference ran on CPU.
 
 % ─────────────────────────────────────────────────────────────
 \subsection{Results}
 \label{sec:eval-results}
-
-\subsection*{Overall Metric Summary}
-
-Table~\ref{tab:eval-summary} reports the per-configuration averages across all 20 test questions.
-
+ 
+\subsubsection*{Overall Metric Summary}
+ 
+Table~\ref{tab:eval-summary} reports the per-configuration averages across all
+20 test questions.
+ 
 \begin{table}[H]
     \centering
     \begin{tabular}{|l|l|c|c|c|c|r|}
         \hline
-        \textbf{ID} & \textbf{Model} & \textbf{ROUGE-L} & \textbf{Faithfulness} & \textbf{Refusal} & \textbf{Hit-rate} & \textbf{Avg time} \\
+        \textbf{ID} & \textbf{Model} & \textbf{ROUGE-L} & \textbf{Sem Sim} & \textbf{Refusal} & \textbf{Hit-rate} & \textbf{Avg time} \\
         \hline\hline
-        A1 & llama3.2:3b, no RAG & 0.117 & 0.377 & 0.00 & 0.667 & 47.6 s \\
-        B1 & llama3.2:3b, RAG    & 0.436 & 0.711 & 0.60 & 0.667 & 70.5 s \\
-        A2 & gemma3:4b,   no RAG & 0.078 & 0.355 & 0.00 & 0.667 & 121.1 s \\
-        B2 & gemma3:4b,   RAG    & 0.534 & 0.844 & 0.80 & 0.667 & 61.4 s \\
+        A1 & llama3.2:3b, no RAG & 0.128 & 0.631 & 0.0 & 0.933 & 41.5 s \\
+        B1 & llama3.2:3b, RAG    & 0.319 & 0.757 & 0.8 & 0.933 & 53.2 s \\
+        A2 & gemma3:4b,   no RAG & 0.076 & 0.618 & 0.0 & 0.933 & 157.2 s \\
+        B2 & gemma3:4b,   RAG    & 0.357 & 0.778 & 1.0 & 0.933 & 66.9 s \\
         \hline
     \end{tabular}
-    \caption{Evaluation results averaged over 20 test questions. Hit-rate is computed over in-scope questions only (15 questions); refusal rate is computed over out-of-scope questions only (5 questions).}
+    \caption{Evaluation results averaged over 20 test questions. Hit-rate is
+    computed over in-scope questions only (15 questions); refusal rate is
+    computed over out-of-scope questions only (5 questions).}
     \label{tab:eval-summary}
 \end{table}
-
-\subsection*{Effect of RAG on Answer Quality}
-
-Adding RAG context produces a consistent and substantial improvement in both lexical quality and faithfulness for both models.
-
-\begin{itemize}
-    \item \textbf{ROUGE-L} increases by a factor of 3.7$\times$ for \texttt{llama3.2:3b} (0.117 $\to$ 0.436) and by 6.9$\times$ for \texttt{gemma3:4b} (0.078 $\to$ 0.534). The larger relative gain for Gemma suggests that without retrieval it relies more heavily on parametric knowledge, which is less aligned with ELTE-specific terminology.
-    \item \textbf{Faithfulness} roughly doubles in both cases (0.377 $\to$ 0.711 for Llama; 0.355 $\to$ 0.844 for Gemma), confirming that the retrieved chunks are genuinely shaping the generated text rather than being ignored.
-\end{itemize}
-
-The qualitative difference is visible in individual answers. For the question \emph{``What is a strong prerequisite?''}, the no-RAG baseline (A1) produces a generic university definition with invented ELTE-specific examples that do not appear in any source document. The RAG-augmented configuration (B1) produces an answer drawn directly from the prerequisites document: \emph{``A strong prerequisite is a prerequisite without which the follow-up subject cannot be taken in the next semester; the follow-up subject can only be registered for after the prerequisite subject has been fulfilled.''} The ROUGE-L score for this question rises from 0.13 (A1) to 0.29 (B1) and faithfulness from 0.44 to 0.80.
-
-\subsection*{Model Comparison}
-
-Among the RAG configurations, \texttt{gemma3:4b} (B2) outperforms \texttt{llama3.2:3b} (B1) on both answer quality metrics: ROUGE-L 0.534 vs.\ 0.436, faithfulness 0.844 vs.\ 0.711. Gemma produces more concise answers that stay closer to the retrieved context, whereas Llama tends to expand its answers with surrounding commentary.
-
-Among the no-RAG baselines, both models score similarly poorly, with Llama slightly ahead on ROUGE-L (0.117 vs.\ 0.078). Neither baseline reliably answers ELTE-specific questions correctly without retrieval.
-
-\subsection*{Retrieval Quality}
-
-The retrieval hit-rate is 0.667 (10 out of 15 in-scope questions) and is identical across all four configurations, since the retrieval step is determined solely by the embedding model and vector index. The five missed questions share a common cause: they ask about topics (Erasmus partnerships, CEEPUS network, Dean contact details) that are present in the HTML pages but were truncated or de-prioritised during chunking because the relevant content appeared in shallow navigation-style text rather than in a dedicated content section. This is the primary bottleneck limiting further ROUGE-L and faithfulness gains: when the correct chunk is not retrieved, the language model must fall back on parametric knowledge, which tends to be inaccurate for institution-specific facts.
-
-\subsection*{Out-of-Scope Refusal}
-
-Neither baseline model refuses any out-of-scope question: both A1 and A2 answer all five irrelevant queries confidently, generating plausible but entirely off-topic responses. Among the RAG configurations, refusal rates are substantially higher based on manual review of the outputs. \texttt{llama3.2:3b} with RAG (B1) correctly refuses 3 out of 5 out-of-scope questions (60\%), and \texttt{gemma3:4b} with RAG (B2) refuses 4 out of 5 (80\%). In both cases the refusal is triggered by the prompt instruction to answer only from provided context: when no relevant chunks are retrieved, the model recognises the absence of grounding material and declines to answer rather than falling back on parametric knowledge.
-
-RAG therefore has a clear secondary benefit beyond answer quality: it substantially improves the system's ability to decline out-of-scope questions. However, neither RAG configuration reaches 100\% refusal, and the no-RAG baselines offer no protection at all, confirming that the prompt-level mechanism alone is not fully reliable.
-
-\subsection*{Response Latency}
-
+ 
+\subsubsection*{Effect of RAG on Answer Quality}
+ 
+Adding RAG context produces a consistent and substantial improvement in both
+lexical and semantic quality for both models.
+ 
+ROUGE-L increases by a factor of $2.5\times$ for \texttt{llama3.2:3b}
+($0.128 \to 0.319$) and by $4.7\times$ for \texttt{gemma3:4b}
+($0.076 \to 0.357$). The larger relative gain for Gemma reflects its greater
+reliance on parametric knowledge without retrieval: without grounding, it
+produces generic answers that share little lexical overlap with the
+ELTE-specific reference answers.
+ 
+Semantic similarity shows the same direction with a smaller relative gap,
+which is expected --- both the no-RAG answers and the references discuss the
+same topic, so embedding-level similarity remains moderate even without
+retrieval. RAG still moves both models upward: $0.631 \to 0.757$ for Llama
+and $0.618 \to 0.778$ for Gemma.
+ 
+\subsubsection*{Model Comparison}
+ 
+Among the RAG configurations, \texttt{gemma3:4b} (B2) outperforms
+\texttt{llama3.2:3b} (B1) on both answer quality metrics: ROUGE-L 0.357
+vs.\ 0.319 and semantic similarity 0.778 vs.\ 0.757. Gemma produces more
+concise answers that stay closer to the retrieved context, whereas Llama
+tends to expand its answers with additional commentary that reduces lexical
+overlap with the reference.
+ 
+Among the no-RAG baselines, both models score poorly and comparably. Llama
+has a slight advantage on ROUGE-L (0.128 vs.\ 0.076) but the difference is
+negligible in practice: neither baseline reliably answers ELTE-specific
+questions without retrieval.
+ 
+\subsubsection*{Retrieval Quality}
+ 
+The retrieval hit-rate is 0.933 (14 out of 15 in-scope questions) and is
+identical across all four configurations, since retrieval depends solely on
+the embedding model and vector index. The single missed question is Q14
+(\emph{Can a Stipendium Hungaricum student go on Erasmus Scholarship?}), where
+the retrieved chunks did not include the expected
+\texttt{info-for-outgoing-erasmus-students} page. The relevant content exists
+in the corpus but the embedding-based search ranked other Erasmus-related
+chunks higher for this query.
+ 
+\subsubsection*{Out-of-Scope Refusal}
+ 
+Neither baseline configuration refuses any out-of-scope question: A1 and A2
+answer all five irrelevant queries confidently, generating plausible but
+entirely off-topic responses. Among the RAG configurations, refusal rates are
+substantially higher. \texttt{llama3.2:3b} with RAG (B1) correctly refuses 4
+out of 5 out-of-scope questions (80\%). The single slip is Q19
+(\emph{What is the population of Hungary?}), where a population figure
+appeared incidentally in a retrieved chunk about Hungarian student demographics,
+giving the model enough apparent grounding to produce an answer.
+\texttt{gemma3:4b} with RAG (B2) refuses all 5 out-of-scope questions (100\%).
+ 
+In both RAG configurations the refusal mechanism is the same: when no relevant
+chunks are retrieved, the model follows the prompt instruction to answer only
+from provided context and declines rather than falling back on parametric
+knowledge.
+ 
+\subsubsection*{Response Latency}
+ 
 \begin{table}[H]
     \centering
-    \begin{tabular}{|l|r|r|r|}
+    \begin{tabular}{|l|r|r|r|r|}
         \hline
-        \textbf{Configuration} & \textbf{Avg (s)} & \textbf{No-RAG overhead} & \textbf{Req.\ threshold} \\
+        \textbf{Configuration} & \textbf{Mean (s)} & \textbf{Median (s)} & \textbf{Min (s)} & \textbf{Max (s)} \\
         \hline\hline
-        A1 — llama3.2:3b, no RAG & 47.6  & —       & exceeded \\
-        B1 — llama3.2:3b, RAG    & 70.5  & +22.9 s & exceeded \\
-        A2 — gemma3:4b,   no RAG & 121.1 & —       & exceeded \\
-        B2 — gemma3:4b,   RAG    & 61.4  & $-$59.7 s & exceeded \\
+        A1 — llama3.2:3b, no RAG &  41.5 &  42.5 & 13.1 &  86.4 \\
+        B1 — llama3.2:3b, RAG    &  53.2 &  51.7 & 24.0 &  88.5 \\
+        A2 — gemma3:4b,   no RAG & 157.2 & 158.3 & 10.7 & 242.5 \\
+        B2 — gemma3:4b,   RAG    &  66.9 &  66.3 & 44.2 & 102.2 \\
         \hline
     \end{tabular}
-    \caption{Average response latency. The non-functional requirement NF-4 sets a target of 30 seconds.}
+    \caption{Response latency in seconds. The non-functional requirement NF-4
+    sets a target of 30 seconds.}
     \label{tab:eval-latency}
 \end{table}
-
-All four configurations exceed the 30-second latency target defined in the requirements (NF-4). This is expected on CPU-only hardware with 4-bit quantised models: the bottleneck is autoregressive token generation, which scales linearly with the number of output tokens. Two observations are worth noting. First, RAG adds latency for \texttt{llama3.2:3b} (+23 s) but \emph{reduces} it for \texttt{gemma3:4b} ($-$60 s): when grounded by retrieved context, Gemma produces shorter, more focused answers, whereas without context it generates lengthy elaborations. Second, \texttt{llama3.2:3b} is substantially faster than \texttt{gemma3:4b} under both conditions, making it the more practical choice where latency matters more than marginal quality gains.
+ 
+All four configurations exceed the 30-second latency target defined in NF-4.
+Two observations stand out. First, RAG adds latency for \texttt{llama3.2:3b}
+(+11.7~s) but \emph{reduces} it substantially for \texttt{gemma3:4b}
+($-$90.3~s): when grounded by retrieved context Gemma produces shorter, more
+focused answers, whereas without context it generates lengthy elaborations.
+Second, \texttt{gemma3:4b} without RAG is effectively unusable on this
+hardware at a mean of 157 seconds and a maximum of over four minutes, while
+with RAG it falls to 67 seconds --- still above the target but within a
+practical range.
 
 % ─────────────────────────────────────────────────────────────
+
 \subsection{Discussion}
 \label{sec:eval-discussion}
-
-\subsection*{RAG Effectiveness}
-
-The evaluation results confirm that RAG is effective for this use case. Grounding the language model in retrieved faculty documents more than triples ROUGE-L scores and nearly doubles faithfulness, for both of the evaluated models. The improvements are consistent and large enough to be meaningful in practice, not merely statistical noise over a 20-question benchmark.
-
-The fundamental mechanism is straightforward: without context, neither \texttt{llama3.2:3b} nor \texttt{gemma3:4b} has reliable knowledge of ELTE-specific regulations — they were trained on general web text and have no exposure to the faculty's prerequisite rules or administrative procedures. The retrieval step injects the relevant passage directly into the prompt, allowing the model to produce a grounded answer even though it has no parametric knowledge of the topic.
-
-\subsection*{Limitations}
-
-Several limitations should be acknowledged.
-
-\paragraph{Small benchmark.} Twenty questions is a limited evaluation set. The in-scope questions are skewed toward prerequisite rules because that is the richest and most structured document in the corpus. Topics such as scholarship regulations, exam appeal procedures, and credit transfer rules are underrepresented.
-
-\paragraph{Retrieval ceiling.} The 0.667 hit-rate means one third of in-scope questions are answered without relevant context. Improving chunking strategy (e.g.\ heading-aware splits, larger overlap) or adding a re-ranking step could raise this ceiling and correspondingly improve ROUGE-L and faithfulness.
-
-\paragraph{ROUGE-L as a proxy.} ROUGE-L measures lexical overlap with a manually written reference answer. A response that is semantically correct but uses different phrasing will score poorly. For a more robust evaluation a human-judged correctness rating or a semantic similarity metric (e.g.\ BERTScore) would complement ROUGE-L.
-
-\paragraph{Latency.} All configurations exceed the 30-second target. Achieving this target on CPU-only hardware with the current models would require either a smaller model (1B parameters) or a faster inference backend. For a deployment scenario where the server runs on shared faculty hardware with a GPU, latency would drop significantly.
-
-\subsection*{Recommended Configuration}
-
-Based on the evaluation results, \textbf{gemma3:4b with RAG (B2)} is the recommended production configuration: it achieves the highest answer quality (ROUGE-L 0.534, faithfulness 0.844) and, counterintuitively, lower latency than the no-RAG Gemma baseline (61 s vs.\ 121 s). If latency is the primary constraint, \textbf{llama3.2:3b with RAG (B1)} offers a reasonable quality-speed trade-off at 70 seconds average response time with only a modest quality reduction.
+ 
+\subsubsection*{RAG Effectiveness}
+ 
+The results confirm that RAG is effective for this use case. Grounding the
+language model in retrieved faculty documents more than doubles ROUGE-L scores
+for both models and raises semantic similarity by roughly 0.14--0.16 points.
+The improvements are consistent across both models and large enough to be
+meaningful in practice, not merely statistical noise over a 20-question
+benchmark.
+ 
+The mechanism is straightforward. Without context, neither \texttt{llama3.2:3b}
+nor \texttt{gemma3:4b} has reliable knowledge of ELTE-specific regulations ---
+they were trained on general web text and have no exposure to the faculty's
+prerequisite rules, credit requirements, or administrative procedures. The
+retrieval step injects the relevant passage directly into the prompt, allowing
+the model to produce a grounded answer even though it has no parametric
+knowledge of the topic.
+ 
+RAG also has a clear secondary benefit: it substantially improves the system's
+ability to decline out-of-scope questions. The no-RAG baselines offer no
+protection at all, while both RAG configurations refuse the majority of
+irrelevant queries. This is a direct consequence of the prompt instruction to
+answer only from provided context: when no relevant chunks are retrieved, the
+model has no grounding material to draw on and declines rather than
+hallucinating.
+ 
+\subsubsection*{Recommended Configuration}
+ 
+Based on the evaluation results, \textbf{gemma3:4b with RAG (B2)} is the
+recommended configuration: it achieves the highest answer quality (ROUGE-L
+0.357, semantic similarity 0.778), a perfect out-of-scope refusal rate, and
+--- counterintuitively --- lower latency than its own no-RAG baseline (67~s
+vs.\ 157~s). If latency is the primary constraint,
+\textbf{llama3.2:3b with RAG (B1)} offers a reasonable trade-off at 53 seconds
+mean response time with a modest quality reduction and a refusal rate of 0.8.
+ 
+\subsubsection*{Limitations}
+ 
+Several limitations of this evaluation should be acknowledged.
+ 
+\paragraph{Small benchmark.}
+Twenty questions is a limited evaluation set. The in-scope questions cover
+eight source documents but are skewed toward topics with well-structured source
+material. Topics such as exam appeal procedures, credit transfer rules, and
+dormitory application deadlines are not represented.
+ 
+\paragraph{ROUGE-L as a proxy.}
+ROUGE-L measures lexical overlap with a manually written reference answer. A
+response that is semantically correct but uses different phrasing will score
+poorly. Semantic similarity partially addresses this, but both metrics share a
+deeper limitation: the reference answers were written by consulting the same
+source documents that the retrieval index is built from, so high scores partly
+reflect how closely the model copies retrieved text rather than how useful the
+answer would be to a real student.
+ 
+\paragraph{Heuristic refusal detection.}
+Refusal rate is computed automatically using a phrase list. This approach can
+both under-count refusals (if the model uses an unanticipated phrasing) and
+over-count them (if a phrase appears in an answer that is not actually a
+refusal). The Q19 case --- where \texttt{llama3.2:3b} with RAG answered a
+population question because a relevant figure appeared incidentally in a
+retrieved chunk --- illustrates a related edge case: the model was not
+hallucinating, but the answer was not grounded in faculty-specific content.
+ 
+\paragraph{Latency.}
+All configurations exceed the 30-second NF-4 target. On CPU-only hardware the
+bottleneck is autoregressive token generation, which scales with output length.
+A deployment on shared faculty hardware with a GPU would reduce latency
+significantly; alternatively, a smaller 1B-parameter model could be evaluated
+as a faster option at the cost of some answer quality.

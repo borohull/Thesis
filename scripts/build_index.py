@@ -103,6 +103,7 @@ def load_txt(file_path, encoding: str = "utf-8") -> List[Document]:
 
 
 def load_html(file_path) -> List[Document]:
+    import re as _re
     file_path = Path(file_path)
 
     with open(file_path, "r", encoding="utf-8") as f:
@@ -113,21 +114,43 @@ def load_html(file_path) -> List[Document]:
     for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
         tag.decompose()
 
-    root = soup.find("main") or soup.find("article") or soup.body or soup
+    # Wider content-div fallback
+    root = (
+        soup.find("main")
+        or soup.find("article")
+        or soup.find("div", id=_re.compile(r"(main|content|page)", _re.I))
+        or soup.find("div", class_=_re.compile(r"(main|content|page)", _re.I))
+        or soup.body
+        or soup
+    )
+
+    # Page title for context prefix
+    title_str = soup.title.string.strip() if soup.title and soup.title.string else ""
+    
+    meta_desc = ""
+    meta_tag = soup.find("meta", attrs={"name": "description"})
+    if meta_tag and meta_tag.get("content", "").strip():
+        meta_desc = meta_tag["content"].strip()
 
     current_heading: str = ""
     lines: list[str] = []
 
-    for tag in root.find_all(["h1", "h2", "h3", "p", "li", "td", "dd"]):
+    for tag in root.find_all(["h1", "h2", "h3", "h4", "h5", "h6",
+                               "p", "li", "td", "dd"]):
         text = tag.get_text(separator=" ", strip=True)
         if not text:
             continue
-        if tag.name in ("h1", "h2", "h3"):
+        if tag.name in ("h1", "h2", "h3", "h4", "h5", "h6"):
             current_heading = text
         else:
             lines.append(f"[{current_heading}] {text}" if current_heading else text)
 
-    text = "\n".join(lines)
+    # Filter boilerplate
+    lines = [l for l in lines if len(l.split()) >= 4]
+
+    body = "\n".join(lines)
+    parts = [p for p in [title_str, meta_desc, body] if p]
+    text = "\n\n".join(parts)
 
     linked_from = file_path.parent.name if "linked_pdfs" in file_path.parts else None
 
@@ -138,7 +161,7 @@ def load_html(file_path) -> List[Document]:
                 "source": str(file_path),
                 "file_name": file_path.name,
                 "file_type": "html",
-                "title": soup.title.string.strip() if soup.title and soup.title.string else None,
+                "title": title_str or None,
                 **({"linked_from": linked_from} if linked_from else {})
             }
         )
