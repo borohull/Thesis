@@ -2,21 +2,40 @@
 \chapter{Developer Documentation}
 \label{ch:devdocs}
 
-This chapter covers the full developer documentation for the ELTE IK Assistant. It begins with the system architecture and key design decisions, then details the implementation of each layer — from data collection and embedding through the RAG backend, REST API, and frontend — and concludes with setup and deployment instructions.
+This chapter covers the full developer documentation for the ELTE IK
+Assistant. It is divided into two parts: the design section describes the
+system architecture, key design decisions, component structure, and storage
+model; the implementation section details how each layer was built.
 
 % ─────────────────────────────────────────────────────────────
-\section{System Architecture}
+\section{Design}
+\label{sec:design}
+
+This section describes the architecture of the ELTE IK Assistant, the
+reasoning behind its key design decisions, the module structure of the
+application, and the storage model used to persist data.
+
+% ─────────────────────────────────────────────────────────────
+\subsection{System Architecture}
 \label{sec:design-overview}
 
-The ELTE IK Assistant is organised as a three-layer pipeline:
+The ELTE IK Assistant is organised as three layers:
 
 \begin{enumerate}
-    \item \textbf{Offline data pipeline} — crawls ELTE websites, cleans and chunks the raw documents, encodes the chunks into vector embeddings, and stores them in a local vector database. This pipeline is run once by the system administrator and re-run whenever the source documents change.
-    \item \textbf{Online serving layer} — a FastAPI web server that accepts a user's natural-language question, retrieves the most relevant document chunks from the vector database, builds a prompt, calls a locally running language model, and returns the generated answer together with source references.
-    \item \textbf{Presentation layer} — a single-page browser UI that maintains session state, renders the conversation, and displays source file metadata alongside each answer.
+    \item \textbf{Data pipeline} — a standalone crawler downloads
+    raw documents from the ELTE websites; a separate ingestion and embedding
+    pipeline cleans, chunks, and encodes those documents into vector embeddings,
+    then stores them in a local vector database. This pipeline is run once by
+    the system administrator and re-run whenever the source documents change.
+    \item \textbf{Online serving layer} — a FastAPI web server that accepts a
+    user's natural-language question, retrieves the most relevant document
+    chunks from the vector database, builds a prompt, calls a locally running
+    language model, and returns the generated answer together with source
+    references.
+    \item \textbf{Presentation layer} — a single-page browser UI that maintains
+    session state, renders the conversation, and displays source file metadata
+    alongside each answer.
 \end{enumerate}
-
-Figure~\ref{fig:architecture} illustrates the high-level data flow between these layers.
 
 \begin{figure}[H]
     \centering
@@ -26,7 +45,7 @@ Figure~\ref{fig:architecture} illustrates the high-level data flow between these
                     minimum height=0.85cm, text centered, font=\small},
         arrow/.style={->, >=latex, thick}
     ]
-        % Offline pipeline (top row)
+        % Data pipeline (top row)
         \node[box, fill=gray!15] (crawler)   {Crawler};
         \node[box, fill=gray!15, right=of crawler]  (ingest)  {Ingestion};
         \node[box, fill=gray!15, right=of ingest]   (embed)   {Embedding};
@@ -52,212 +71,208 @@ Figure~\ref{fig:architecture} illustrates the high-level data flow between these
         \draw[arrow, dashed] (rag) -- node[right]{\tiny retrieve} (chroma);
 
         % Labels
-        \node[above=0.15cm of crawler, font=\small\itshape] {Offline pipeline};
+        \node[above=0.15cm of crawler, font=\small\itshape] {Data pipeline};
         \node[above=0.15cm of ui,      font=\small\itshape] {Online pipeline};
     \end{tikzpicture}
-    \caption{High-level architecture of the ELTE IK Assistant. The offline pipeline (top) is run once to build the vector index; the online pipeline (bottom) handles every user query at runtime.}
+    \caption{High-level architecture of the ELTE IK Assistant.}
     \label{fig:architecture}
 \end{figure}
 
-The strict separation between the offline and online pipelines is a deliberate consequence of the offline-operation requirement (R-NF-1): once the vector index is built, the serving layer never reads from disk beyond the ChromaDB query and needs no network access.
+Figure~\ref{fig:architecture} illustrates the high-level data flow between
+these layers. The data pipeline (top) is run once to build the vector index;
+the online pipeline (bottom) handles every user query at runtime.
+
+The strict separation between the data and online pipelines is a deliberate
+consequence of the offline-operation requirement (R-NF-1): once the vector
+index is built, the serving layer requires no network access and its only
+disk reads are ChromaDB queries and SQLite log operations.
 
 % ─────────────────────────────────────────────────────────────
-% ─────────────────────────────────────────────────────────────
-\section{Technology Choice}
-\label{sec:design-techchoice}
-
-The system was developed and tested on a personal laptop running Windows~11
-with 8~GB of RAM and no dedicated GPU. Beyond the hardware, a core requirement
-was that no user query or document ever leave the local machine, which ruled
-out cloud-hosted language model APIs. These two constraints — limited memory
-and strict data locality — drove every component choice toward tools that are
-lightweight, run in-process, and require no external services.
-
-\begin{table}[H]
-\centering
-\begin{tabular}{| m{0.20\textwidth} | m{0.20\textwidth} | m{0.50\textwidth} |}
-\hline
-\textbf{Concern} & \textbf{Choice} & \textbf{Reason} \\
-\hline
-Language model serving & Ollama &
-    Preferred over running a raw \texttt{llama.cpp} binary because it exposes a
-    stable REST API, handles model quantisation and memory mapping automatically,
-    and makes switching models a one-line change in \texttt{settings.py}. \\
-\hline
-Language model & Llama~3.2~(3B) / Gemma~3~(4B) &
-    The 8~GB RAM constraint rules out larger models at 16-bit precision.
-    Both models use 4-bit quantisation, reducing their footprint to
-    approximately 2--2.5~GB and leaving sufficient headroom for the OS,
-    embedding model, and vector store. \\
-\hline
-Embeddings & all-MiniLM-L6-v2 &
-    A compact sentence transformer that produces 384-dimensional vectors and
-    runs efficiently on CPU without a dedicated GPU. Although larger embedding
-    models exist, this model offers a strong accuracy-to-resource trade-off
-    for English factual retrieval tasks. \\
-\hline
-Vector store & ChromaDB &
-    Runs in-process with no separate server, persists to a plain directory,
-    and supports cosine-similarity search out of the box. This satisfies the
-    offline-operation requirement with minimal operational overhead. \\
-\hline
-Backend framework & FastAPI &
-    Asynchronous Python framework with automatic OpenAPI documentation,
-    built-in static file serving, and low boilerplate. Well suited to
-    wrapping a single RAG pipeline as a REST API. \\
-\hline
-Interaction log & SQLite &
-    The application runs on a single machine and log volume is modest.
-    SQLite requires no separate server process and stores the entire
-    database in a single portable file. \\
-\hline
-Frontend & Vanilla JS &
-    A framework-free single HTML file eliminates a build step and all
-    Node.js dependencies, keeping deployment as simple as copying a file
-    into \texttt{app/static/}. \\
-\hline
-\end{tabular}
-\caption{Technology stack and rationale for each choice.}
-\label{tab:stack}
-\end{table}
-
-% ─────────────────────────────────────────────────────────────
-\section{Component Design}
-\label{sec:design-components}
-
-Figure~\ref{fig:class-diagram} shows the module structure of the application and the dependencies between them.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=\textwidth]{images/ClassDiagram.png}
-    \caption{Class diagram of the ELTE IK Assistant application modules.}
-    \label{fig:class-diagram}
-\end{figure}
-
-\begin{itemize}
-    \item \textbf{Crawler:} performs a breadth-first traversal of the ELTE Faculty of Informatics website starting from a set of seed URLs. It downloads HTML pages, PDF documents, and DOCX files into \texttt{data/raw/}, computes a SHA-256 digest of each file, and records it in a manifest. On subsequent runs only files whose digest has changed are re-downloaded, keeping re-indexing time proportional to the volume of changed content. It feeds directly into the Ingestion component.
-
-    \item \textbf{Ingestion and Chunking:} receives raw files from the Crawler and applies format-specific loaders (PyMuPDF for PDFs, BeautifulSoup for HTML, python-docx for DOCX) to extract clean text. The text is split into overlapping 800-character chunks with a 150-character overlap using a recursive character splitter. Each chunk carries metadata (source path, file type, page number, chunk identifier) and is written to \texttt{data/processed/chunks.json} for the Embedding component.
-
-    \item \textbf{Embedding Model and Vector Store:} the \texttt{all-MiniLM-L6-v2} sentence-transformer~\cite{reimers2019sbert} encodes each chunk into a 384-dimensional vector. The model occupies approximately 90~MB and runs entirely on CPU. Vectors are stored in a ChromaDB collection named \texttt{elte\_ik} using cosine similarity, persisted to \texttt{data/processed/chroma\_db/}. The Vector Store is the boundary between the offline pipeline and the online serving layer.
-
-    \item \textbf{RAG Module:} the core of the online pipeline. At query time it encodes the user's question with the same \texttt{all-MiniLM-L6-v2} model (mandatory — a model mismatch produces wrong retrieval results), retrieves the top-$k$ most similar chunks from ChromaDB by cosine similarity, assembles them into a grounded prompt that instructs the LLM to answer only from the provided context, and forwards the prompt to the Language Model. Both the ChromaDB client and the embedding model are initialised once at server startup as singletons, eliminating per-request load overhead.
-
-    \item \textbf{FastAPI Backend:} exposes the RAG pipeline over HTTP. The \texttt{POST /chat} endpoint calls the RAG Module and logs the result; \texttt{GET /health} reports whether Ollama is reachable; additional endpoints handle session management and user-uploaded documents. Static files (the single-page UI) are served from \texttt{app/static/} via FastAPI's \texttt{StaticFiles} mount.
-
-    \item \textbf{Chat Logging:} every request–response pair is persisted to a SQLite database (\texttt{data/logs/chat\_logs.db}). The schema records the session identifier, user message, assistant answer, source file list, response time, and timestamp. Logging supports both retrospective quality analysis and the session sidebar in the UI.
-
-    \item \textbf{Frontend:} a single self-contained HTML file with embedded CSS and vanilla JavaScript served by the FastAPI backend. It communicates with the backend exclusively via REST and holds no local copy of the vector index or the language model. The framework-free design eliminates a build step and reduces operational complexity.
-\end{itemize}
-
-% ─────────────────────────────────────────────────────────────
-\section{Data Flow}
-\label{sec:design-dataflow}
-
-Figure~\ref{fig:dataflow} shows the complete data flow for a single user query.
-The main path runs top to bottom through the serving layer; ChromaDB and the
-SQLite log are accessed as side effects of the central processing steps.
-
-\begin{figure}[H]
-\centering
-\begin{tikzpicture}[
-    node distance=0.65cm and 3.0cm,
-    box/.style={rectangle, draw, rounded corners=3pt,
-                minimum width=4.0cm, minimum height=0.72cm,
-                text centered, font=\small, fill=blue!8},
-    store/.style={rectangle, draw, rounded corners=2pt,
-                  minimum width=2.8cm, minimum height=0.72cm,
-                  text centered, font=\small, fill=gray!15,
-                  double, double distance=2pt},
-    arr/.style={->, >=latex, thick},
-    lbl/.style={font=\scriptsize, fill=white, inner sep=1pt}
-]
-
-%% ── Main spine ──────────────────────────────────────────────
-\node[box]                 (ui1)   {Browser UI};
-\node[box, below=of ui1]   (api1)  {FastAPI Handler};
-\node[box, below=of api1]  (emb)   {Sentence Transformer};
-\node[box, below=of emb]   (rag)   {RAG: Assemble Prompt};
-\node[box, below=of rag]   (llm)   {Ollama LLM};
-\node[box, below=of llm]   (api2)  {FastAPI Handler};
-\node[box, below=of api2]  (ui2)   {Browser UI};
-
-%% ── Side stores ─────────────────────────────────────────────
-\node[store, right=of emb]  (chroma) {ChromaDB};
-\node[store, right=of api2] (sqlite) {SQLite Log};
-
-%% ── Main arrows ─────────────────────────────────────────────
-\draw[arr] (ui1)  -- node[lbl,right]{POST /chat (message, session)} (api1);
-\draw[arr] (api1) -- node[lbl,right]{\texttt{rag\_query(message)}}  (emb);
-\draw[arr] (emb)  -- node[lbl,right]{384-dim query vector}          (rag);
-\draw[arr] (rag)  -- node[lbl,right]{grounded prompt}               (llm);
-\draw[arr] (llm)  -- node[lbl,right]{answer string}                 (api2);
-\draw[arr] (api2) -- node[lbl,right]{JSON response}                 (ui2);
-
-%% ── ChromaDB: query out, top-3 chunks back ──────────────────
-\draw[arr] (emb.east)     -- node[lbl,above]{query vector} (chroma.west);
-\draw[arr] (chroma.south) |- node[lbl,right,pos=0.25]{top-3 chunks} (rag.east);
-
-%% ── SQLite write ────────────────────────────────────────────
-\draw[arr] (api2.east) -- node[lbl,above]{log interaction} (sqlite.west);
-
-\end{tikzpicture}
-\caption{Data flow for a single user query. The main path (left column) shows
-the request processing sequence; ChromaDB is queried during prompt assembly and
-the interaction is logged to SQLite before the response is returned.}
-\label{fig:dataflow}
-\end{figure}
-
-The round-trip latency is dominated by the Ollama inference step. On a
-CPU-only machine with \texttt{llama3.2:3b} the median observed latency is
-approximately 48~seconds without RAG context and 70~seconds with RAG context.
-With \texttt{gemma3:4b} the figures are 121~seconds and 61~seconds respectively —
-the shorter RAG latency reflects the model generating a more focused answer when
-constrained to the provided context.
-
-% ─────────────────────────────────────────────────────────────
-\section{Storage Design}
-\label{sec:design-storage}
-
-The system uses two persistent stores, each chosen to match the access pattern of the data it holds.
-
-\begin{table}[H]
-    \centering
-    \begin{tabular}{|l|l|p{0.42\textwidth}|}
-        \hline
-        \textbf{Store} & \textbf{Location} & \textbf{Contents and access pattern} \\
-        \hline\hline
-        ChromaDB & \texttt{data/processed/chroma\_db/} & 6112 chunk embeddings (384-dim float32) + metadata. Written once by the offline pipeline; read on every query via approximate nearest-neighbour search. \\
-        \hline
-        SQLite & \texttt{data/logs/chat\_logs.db} & One row per chat turn: session id, user message, assistant answer, sources, timestamp. Appended on every request; queried for session listing and history. \\
-        \hline
-        Manifest & \texttt{data/processed/manifest.json} & SHA-256 digests of all crawled files. Read and written by the crawler to detect changed files during incremental re-indexing. \\
-        \hline
-    \end{tabular}
-    \caption{Persistent storage used by the ELTE IK Assistant.}
-    \label{tab:storage}
-\end{table}
-
-All three stores are plain files on the local filesystem. No database server, no cloud storage, and no network filesystem are involved, satisfying the offline-operation and data-privacy requirements.
-
-% ─────────────────────────────────────────────────────────────
-\section{Key Design Decisions}
+\subsection{Key Design Decisions}
 \label{sec:design-decisions}
 
 \paragraph{Local LLM via Ollama.}
-Running the language model locally is the single most consequential architectural decision. It satisfies the privacy requirement (no query leaves the machine) and the offline requirement (no internet connection needed at inference time), at the cost of significantly higher latency compared with a cloud API. Ollama was chosen over running a raw \texttt{llama.cpp} binary because it exposes a stable REST interface, handles model quantisation and memory mapping automatically, and supports multiple models without code changes — the model name in \texttt{settings.py} is the only thing that changes when switching between \texttt{llama3.2:3b} and \texttt{gemma3:4b}.
+Running the language model locally is the single most consequential
+architectural decision. It satisfies the privacy requirement — no query or
+document ever leaves the machine — and the offline requirement, since no
+internet connection is needed at inference time. The cost is significantly
+higher latency compared with a cloud API: on the development hardware,
+median response times range from 48 to 121 seconds depending on the model.
+This trade-off was accepted as unavoidable given the constraints; a cloud
+API would have violated both requirements regardless of its performance.
 
-\paragraph{Small quantised models.}
-The 8~GB RAM constraint rules out 7B+ parameter models at 16-bit precision ($\approx$14~GB). Both evaluated models (\texttt{llama3.2:3b} and \texttt{gemma3:4b}) use 4-bit quantisation, which reduces their memory footprint to approximately 2~GB and 2.5~GB respectively, leaving enough headroom for the embedding model, ChromaDB index, and operating system.
+\paragraph{Model selection.}
+\texttt{llama3.2:3b} and \texttt{gemma3:4b} were selected as the two
+leading instruction-tuned open-weight models in the sub-5B parameter range
+available through Ollama at the time of development. The 8~GB RAM constraint
+rules out 7B+ parameter models at 16-bit precision ($\approx$14~GB); both
+evaluated models use 4-bit quantisation, reducing their footprint to
+approximately 2~GB and 2.5~GB respectively, leaving sufficient headroom for
+the embedding model, ChromaDB index, and operating system. Both models also
+support instruction-following out of the box, which is necessary for the
+grounded-answer prompt to work reliably.
 
-\paragraph{Top-$k = 3$ retrieval.}
-Three chunks were chosen as the default retrieval count after balancing two competing forces: more chunks provide richer context but increase the prompt length, which in turn increases inference latency and can cause the model to lose focus on the most relevant passage. At 800 characters per chunk, three chunks contribute approximately 2400 characters of context — well within the 4096-token context window of the evaluated models while keeping the prompt concise.
+\paragraph{Chunking strategy.}
+Source documents are split into 800-character chunks with a 150-character
+overlap. The chunk size was chosen empirically as a practical balance: large
+enough to contain a complete thought or regulation clause, yet small enough
+for the embedding model to encode with high fidelity and for three chunks to
+fit comfortably within the LLM context window alongside the prompt template.
+The 150-character overlap ensures that information near a chunk boundary
+appears in both adjacent chunks, so no sentence is silently dropped at a
+split point.
 
-\paragraph{Temperature = 0.1.}
-A near-zero temperature makes the language model near-deterministic and biased toward its highest-probability completions. For a factual question-answering chatbot this is desirable: users expect consistent, precise answers rather than creative variation. The small non-zero value (rather than exactly 0) avoids degenerate repetition loops that some models exhibit at temperature zero.
+\paragraph{Top-$k$ retrieval.}
+The evaluation in Chapter~\ref{ch:testing} was conducted at $k = 5$.
+The production default was subsequently set to $k = 3$ to reduce inference
+latency on CPU-only hardware: each additional retrieved chunk lengthens the
+prompt and increases generation time, and the evaluation demonstrated that
+retrieval quality was already strong at $k = 5$, so reducing to $k = 3$ is a
+conservative latency trade-off with minimal impact on answer quality. At
+800 characters per chunk, three chunks contribute approximately 2400
+characters of context — well within the context window of both evaluated
+models.
 
-\paragraph{Separation of offline and online pipelines.}
-The embedding pipeline is entirely offline and produces an artefact (the ChromaDB directory) that the serving layer consumes read-only. This means the serving layer starts instantly — there is no warm-up embedding step — and the administrator can rebuild the index without touching the running server. It also means the embedding model and the vector store are initialised once at server startup rather than on every request, which is essential for meeting the latency target.
+\paragraph{Temperature.}
+A near-zero temperature of 0.1 makes the language model near-deterministic
+and biased toward its highest-probability completions. For a factual
+question-answering assistant this is desirable: users expect consistent,
+precise answers rather than creative variation. The value was set to 0.1
+rather than exactly 0 to avoid degenerate repetition loops that were observed
+during development at temperature zero, where some models produce
+near-infinite sequences of repeated tokens.
+
+\paragraph{Containerisation with Docker.}
+Docker Compose packages the entire stack — FastAPI, Ollama, and all
+dependencies — into isolated containers that run identically regardless of
+the host environment. This directly satisfies the deployability requirement:
+moving from a local machine to a faculty server requires only infrastructure
+provisioning, with no changes to application code. The trade-off is added
+complexity for single-machine users, who must install Docker Desktop and
+accept a longer first-run time while models are downloaded and the knowledge
+base is built. This cost was considered acceptable because the manual setup
+path remains available as an alternative for users who prefer it.
+
+% ─────────────────────────────────────────────────────────────
+\subsection{Component Design}
+\label{sec:design-components}
+
+The application is composed of five Python modules in the \texttt{app/}
+package, each with a single responsibility, plus two data pipeline scripts
+that run outside the serving layer. All modules read their tunable parameters
+from a shared configuration module (\texttt{app/settings.py}); this
+dependency is not shown in Figure~\ref{fig:module-diagram} to avoid
+cluttering the arrows, but it applies to every module listed below.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/ModuleDiagram.png}
+    \caption{Module structure and dependencies of the ELTE IK Assistant.}
+    \label{fig:module-diagram}
+\end{figure}
+
+\textbf{Data pipeline scripts.} Two scripts build the knowledge base and
+are never imported by the serving layer at runtime.
+\begin{itemize}
+    \item \textbf{Crawler} (\texttt{scripts/crawler.py}) performs a
+    resumable breadth-first traversal of the ELTE Faculty of Informatics
+    website. It downloads HTML pages, PDFs, and DOCX files into
+    \texttt{data/raw/}, computes a SHA-256 digest of each file, and records
+    it in a manifest so that subsequent runs only re-download changed files.
+
+    \item \textbf{Build index} (\texttt{scripts/build\_index.py}) reads the
+    raw files produced by the crawler, applies format-specific loaders to
+    extract clean text, splits the text into overlapping chunks, encodes
+    each chunk with \texttt{all-MiniLM-L6-v2}, and upserts the resulting
+    vectors into ChromaDB. It uses the same SHA-256 manifest to process
+    only new or changed files incrementally.
+\end{itemize}
+
+\textbf{Serving layer modules.} The following five modules are loaded when
+the FastAPI process starts and handle all runtime activity.
+\begin{itemize}
+    \item \textbf{settings} (\texttt{app/settings.py}) defines every
+    tunable constant — paths, model names, retrieval parameters, and
+    timeouts — in one place. No business logic lives here; all other modules
+    import from it so that a single edit propagates everywhere.
+
+    \item \textbf{rag} (\texttt{app/rag.py}) is the core of the serving
+    layer. It initialises the ChromaDB client, the ChromaDB collection,
+    and the \texttt{all-MiniLM-L6-v2} embedding model as module-level
+    singletons at import time, so they are loaded from disk once and reused
+    on every request. At query time \texttt{rag\_query()} encodes the
+    user's question, retrieves the top-$k$ most similar chunks from
+    ChromaDB, assembles a grounded prompt, calls Ollama, and returns the
+    answer with source references.
+
+    \item \textbf{ingest} (\texttt{app/ingest.py}) handles live document
+    ingestion for user-uploaded files. It applies the same loaders and
+    chunking logic used by the data pipeline, then upserts the new
+    embeddings directly into the running ChromaDB collection so that
+    uploaded documents are available for retrieval immediately, without a
+    server restart.
+
+    \item \textbf{logger} (\texttt{app/logger.py}) owns the SQLite
+    database. It initialises the three-table schema on first run and exposes
+    functions for recording chat interactions, managing sessions, and
+    logging uploaded files. It is the only module that reads from or writes
+    to the database.
+
+    \item \textbf{main} (\texttt{app/main.py}) is the FastAPI application
+    entry point. It wires the HTTP endpoints to the other modules, mounts
+    the static frontend files, and applies CORS middleware. It contains no
+    business logic of its own — each endpoint delegates immediately to
+    \texttt{rag}, \texttt{ingest}, or \texttt{logger}.
+\end{itemize}
+
+% ─────────────────────────────────────────────────────────────
+\subsection{Storage Design}
+\label{sec:design-storage}
+
+The system uses two runtime stores, accessed on every request, and two
+build artifacts produced by the data pipeline and consumed during index
+construction. All four are plain files on the local filesystem — no
+database server, no cloud storage, and no network filesystem are involved.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|l|p{0.40\textwidth}|}
+        \hline
+        \textbf{Store} & \textbf{Location} & \textbf{Contents and access pattern} \\
+        \hline\hline
+        ChromaDB & \texttt{data/processed/chroma\_db/} &
+            6112 chunk embeddings (384-dim float32) and metadata.
+            Written once by the data pipeline; read on every query
+            via approximate nearest-neighbour search. \\
+        \hline
+        SQLite & \texttt{data/logs/chat\_logs.db} &
+            One row per chat turn: session id, user message, assistant
+            answer, sources, response time, and timestamp.
+            Appended on every request; queried for session listing
+            and history retrieval. \\
+        \hline\hline
+        chunks.json & \texttt{data/processed/chunks.json} &
+            All document chunks with text and metadata produced by
+            the ingestion step. Written by \texttt{build\_index.py}
+            after chunking; read by the embedding step to populate
+            ChromaDB. Not accessed at runtime. \\
+        \hline
+        manifest.json & \texttt{data/processed/manifest.json} &
+            SHA-256 digests, chunk counts, and timestamps for every
+            crawled file. Written and read by the data pipeline to
+            detect new, updated, and deleted files during incremental
+            re-indexing. Not accessed at runtime. \\
+        \hline
+    \end{tabular}
+    \caption{Runtime stores (above double line) and data pipeline
+             artifacts (below double line) used by the ELTE IK Assistant.}
+    \label{tab:storage}
+\end{table}
+
+Because the entire system state is contained in these four files, the
+knowledge base can be backed up or migrated by copying the
+\texttt{data/} directory, and the serving layer can be restarted on
+any machine that has the directory without rebuilding the index.
 
 % ─────────────────────────────────────────────────────────────
 \input{samples_en/impl.tex}

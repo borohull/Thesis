@@ -281,16 +281,39 @@ restart required.
 \section{Using the Command-Line Client}
 \label{sec:user-cli}
 
-A lightweight CLI client is available for scripting and testing without a
-browser. The FastAPI server must be running before starting the client:
+A command-line client is provided as an alternative to the web interface,
+suitable for scripting and testing. The FastAPI server must be running before
+starting the client:
 
 \begin{lstlisting}[language=bash]
 python scripts/chat_cli.py
 \end{lstlisting}
 
-Type a question at the \texttt{You:} prompt and press Enter. The client sends
-the question to the server and prints the answer and source references.
-Type \texttt{exit} or press \texttt{Ctrl+C} to quit.
+On startup the client displays a banner and connects to the server.
+Figure~\ref{fig:cli-screenshot} shows the interface.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/chat_cli.png}
+    \caption{The ELTE IK Assistant command-line client.}
+    \label{fig:cli-screenshot}
+\end{figure}
+
+Type a question at the \texttt{You:} prompt and press Enter. Each answer is
+followed by the source documents used to construct it. The client supports
+the following commands:
+
+\begin{itemize}
+    \item \texttt{/commands} --- display the full list of available commands.
+    \item \texttt{/sessions} --- list all past conversation sessions.
+    \item \texttt{/resume} --- select and resume a previous session.
+    \item \texttt{/model} --- switch the active language model for the current session.
+    \item \texttt{/session} --- display the current session name and active model.
+    \item \texttt{exit} / \texttt{quit} / \texttt{Ctrl+C} --- quit the client.
+\end{itemize}
+
+Each new run starts a fresh session. Conversations persist on the server and
+can be resumed in a later run using \texttt{/resume}.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Example Queries}
@@ -303,30 +326,31 @@ how it responds to out-of-scope input.
 \textit{Question:} ``What is a strong prerequisite and how does it differ from
 a weak one?''
 
-\textit{Answer:} According to the context, a strong prerequisite is a 
-prerequisite without which the follow-up subject cannot be taken in the next semester, and the follow-up subject 
-can only be registered for after the prerequisite subject has been fulfilled. It must be completed before taking the follow-up subject. 
-A strong prerequisite differs from a weak one in that it has no special annotation 
-(as opposed to being marked as 'weak') and is considered essential for taking the follow-up subject in the next semester.
+\textit{Answer:} A strong prerequisite is a prerequisite without which the follow-up subject 
+cannot be taken in the next semester, and the follow-up subject can only be registered for after 
+the prerequisite subject has been fulfilled. It must be completed before taking the follow-up subject. 
+It differs from a weak prerequisite in that it has no special annotation and its fulfillment is mandatory 
+for registering or completing the follow-up subject.
 
-\textit{Sources:} \texttt{prerequisites.html}
+\textit{Sources:} \texttt{Weakening the prerequisite(s).pdf}
 
 \paragraph{Example 2 --- Exam rules.}
 \textit{Question:} ``How many times can I retake a failed exam in one
 semester?''
 
-\textit{Answer:} According to Section 79 (6) of the ELTE Academic Regulations, you can retake and 
-improve your grade in no more than two exams per semester.
+\textit{Answer:} A student may attempt an exam up to three times per exam
+period. If all three attempts are failed, the course must be re-registered in
+a subsequent semester.
 
 \textit{Sources:} \texttt{ELTE Academic Regulations.pdf}
 
-\paragraph{Example 3 --- Ranking when registering for a subject.}
-\textit{Question:} ``How do I see my ranking when registering for a subject?''
+\paragraph{Example 3 --- Registration procedure.}
+\textit{Question:} ``How do I see my ranking when registering for a subject''
 
-\textit{Answer:} To see your ranking when registering for a subject, follow these steps: 1. 
-Find the subject you want to register for. 2. Click the arrow icon at the end of the corresponding row. 
-3. Then click "Details" to view your score and your position in the ranking. 
-This will show you your ranking sequence and lucky point (ranking score 1 and 2, respectively)
+\textit{Answer:} To see your ranking when registering for a subject, follow these steps: 
+1. Find the subject you want to register for. 2. Click the arrow icon at the end of the corresponding row. 
+3. Then click "Details" to view your score and your position in the ranking. This will show you your ranking 
+sequence and lucky point (ranking score 1 and 2, respectively).
 
 \textit{Sources:} \texttt{registration for subjects BSc\_MSc (1).pdf}
 

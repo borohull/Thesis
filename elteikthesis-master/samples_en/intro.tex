@@ -177,9 +177,7 @@ local machine. The following components form the complete stack.
     \item \textbf{Docker}, a containerisation platform, packages the entire
         application — the FastAPI backend, Ollama, and all dependencies — into
         isolated containers that run identically regardless of the host environment.
-        Each service is defined in a \texttt{docker-compose.yml} file, so the full
-        stack starts with a single command and requires no manual dependency
-        installation. This makes it the mechanism behind the deployability
+        This makes it the mechanism behind the deployability
         requirement: moving from a local machine to a faculty server requires
         only infrastructure provisioning, with no changes to the application code.
 \end{itemize}
