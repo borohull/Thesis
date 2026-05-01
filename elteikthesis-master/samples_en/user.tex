@@ -34,7 +34,7 @@ the ELTE IK Assistant.
 \end{table}
 
 % ─────────────────────────────────────────────────────────────────────────────
-\section{Installation and Configuration}
+\section{Installation}
 \label{sec:user-install}
 
 \subsection*{Option A --- Docker}
@@ -190,39 +190,6 @@ curl http://localhost:8000/health
 A successful response is \texttt{\{"status": "ok", "ollama": true\}}. If
 \texttt{"ollama": false} appears, Ollama is not running or the selected model
 has not been pulled.
-
-\subsection*{Configuration}
-
-All tunable parameters are defined in \texttt{app/settings.py}.
-The most commonly adjusted values are listed in Table~\ref{tab:user-settings}.
-
-\begin{table}[H]
-    \centering
-    \begin{tabular}{ | m{0.3\textwidth} | m{0.2\textwidth} | m{0.4\textwidth} | }
-        \hline
-        \textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
-        \hline \hline
-        \texttt{OLLAMA\_MODEL}    & \texttt{llama3.2:3b}       & Language model served by Ollama \\
-        \hline
-        \texttt{EMBEDDING\_MODEL} & \texttt{all-MiniLM-L6-v2}  & Sentence embedding model \\
-        \hline
-        \texttt{TOP\_K}           & \texttt{3}                 & Chunks retrieved per query \\
-        \hline
-        \texttt{TEMPERATURE}      & \texttt{0.1}               & LLM sampling temperature \\
-        \hline
-        \texttt{CHROMA\_PATH}     & \texttt{data/processed/chroma\_db} & Vector store location on disk \\
-        \hline
-    \end{tabular}
-    \caption{Key configuration parameters in \texttt{app/settings.py}.}
-    \label{tab:user-settings}
-\end{table}
-
-Changing \texttt{OLLAMA\_MODEL} takes effect on the next server start.
-Changing \texttt{EMBEDDING\_MODEL} additionally requires rebuilding the vector
-store by re-running \texttt{python scripts/build\_index.py}.
-
-\textbf{Note:} these settings are relevant only for whoever deploys the system,
-not for end users asking questions through the interface.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Using the Web Interface}

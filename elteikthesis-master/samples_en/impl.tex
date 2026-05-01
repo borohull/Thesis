@@ -5,111 +5,85 @@
 This section describes the full implementation of the ELTE IK Assistant across its four layers: data collection and ingestion, document embedding and vector storage, the RAG backend, and the web-based frontend. Each subsection covers one layer in detail, including the key design choices, data structures, and code.
 
 % ─────────────────────────────────────────────────────────────
-\subsection{Setup and Deployment}
-\label{subsec:impl-setup}
+\subsection{Project Structure}
+\label{sec:impl-structure}
 
-Table~\ref{tab:sys-req} lists the minimum system requirements.
+The repository is organised into clearly separated concerns, as summarised in
+Table~\ref{tab:structure}. The data pipeline scripts are never imported by the
+serving layer; the \texttt{app/} package contains everything loaded at runtime.
 
-\begin{table}[H]
-    \centering
-    \begin{tabular}{ | m{0.28\textwidth} | m{0.62\textwidth} | }
-        \hline
-        \textbf{Component} & \textbf{Requirement} \\
-        \hline \hline
-        Operating system & Windows 10/11, macOS 12+, or Ubuntu 22.04+ \\
-        \hline
-        RAM & 8~GB (16~GB recommended) \\
-        \hline
-        Disk space & $\approx$6~GB (models + vector store + crawled data) \\
-        \hline
-        Python & 3.10 or newer \\
-        \hline
-        Ollama & Latest release (\url{https://ollama.com}) \\
-        \hline
-        Internet access & Required only during the initial setup phase \\
-        \hline
-    \end{tabular}
-    \caption{Minimum system requirements.}
-    \label{tab:sys-req}
-\end{table}
+\begin{longtable}{|l|p{0.58\textwidth}|}
+    \hline
+    \textbf{Path} & \textbf{Purpose} \\
+    \hline \hline
+    \endfirsthead
+    \hline
+    \textbf{Path} & \textbf{Purpose} \\
+    \hline \hline
+    \endhead
+    \hline
+    \endfoot
 
-\paragraph{Install Ollama.}
-Download and install Ollama from \url{https://ollama.com/download}, then start the background service and pull the two language models:
-
-\begin{lstlisting}[language=bash]
-ollama serve
-ollama pull llama3.2:3b
-ollama pull gemma3:4b
-\end{lstlisting}
-
-\paragraph{Clone the repository and create a virtual environment.}
-
-\begin{lstlisting}[language=bash]
-git clone https://github.com/borohull/Thesis.git
-cd Thesis/elte_chat
-python -m venv .venv
-# Windows:  .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-\end{lstlisting}
-
-\paragraph{Build the knowledge base.}
-This is a one-time process that must be completed before the server can answer questions.
-
-\begin{enumerate}
-    \item Run the crawler to download ELTE documents into \texttt{data/raw/}:
-\begin{lstlisting}[language=bash]
-python scripts/crawler.py
-\end{lstlisting}
-    \item Open JupyterLab and run \textbf{\texttt{notebooks/01\_data\_ingestion.ipynb}} — loads and chunks the raw files, writes \texttt{data/processed/chunks.json}.
-    \item Run \textbf{\texttt{notebooks/02\_embedding.ipynb}} — encodes chunks with \texttt{all-MiniLM-L6-v2} and stores vectors in ChromaDB under \texttt{data/processed/chroma\_db/}.
-\end{enumerate}
-
-All tunable parameters are defined in \texttt{app/settings.py}. The most commonly adjusted settings are shown in Table~\ref{tab:settings}.
-
-\begin{table}[H]
-    \centering
-    \begin{tabular}{ | m{0.3\textwidth} | m{0.18\textwidth} | m{0.42\textwidth} | }
-        \hline
-        \textbf{Setting} & \textbf{Default} & \textbf{Description} \\
-        \hline \hline
-        \texttt{OLLAMA\_MODEL} & \texttt{llama3.2:3b} & Default language model \\
-        \hline
-        \texttt{TOP\_K} & \texttt{3} & Chunks retrieved per query \\
-        \hline
-        \texttt{TEMPERATURE} & \texttt{0.1} & LLM sampling temperature \\
-        \hline
-        \texttt{EMBEDDING\_MODEL} & \texttt{all-MiniLM-L6-v2} & Must match notebook~02 \\
-        \hline
-    \end{tabular}
-    \caption{Key configuration parameters in \texttt{app/settings.py}.}
-    \label{tab:settings}
-\end{table}
-
-\noindent\textbf{Important:} \texttt{EMBEDDING\_MODEL} must be kept consistent between the index build and the serving layer. If it is changed, notebook~02 must be re-run to rebuild the vector store — a mismatch between the query encoder and the stored index produces incorrect retrieval results.
-
-\paragraph{Start the server.}
-Run the following command from the project root with the virtual environment active and Ollama running:
-
-\begin{lstlisting}[language=bash]
-uvicorn app.main:app --reload
-\end{lstlisting}
-
-The server starts on \texttt{http://localhost:8000}. Verify it is healthy with:
-
-\begin{lstlisting}[language=bash]
-curl http://localhost:8000/health
-\end{lstlisting}
-
-A successful response is \texttt{\{"status": "ok", "ollama": true\}}. If \texttt{"ollama": false} appears, Ollama is not running or the selected model has not been pulled.
+    \multicolumn{2}{|l|}{\textit{Setup and deployment}} \\
+    \hline
+    \texttt{setup.sh} / \texttt{setup.bat}  & First-run setup scripts for macOS/Linux and Windows. Pull Ollama models, create the virtual environment, run the crawler, and build the index. \\
+    \hline
+    \texttt{docker-compose.yml}             & Orchestrates the Ollama service, model pull, and FastAPI application as isolated containers for server deployment. \\
+    \hline\hline
+    \multicolumn{2}{|l|}{\textit{Data pipeline (run once; not imported at runtime)}} \\
+    \hline
+    \texttt{scripts/crawler.py}             & Resumable BFS web crawler for both ELTE domains. Downloads HTML, PDF, and DOCX files into \texttt{data/raw/}. \\
+    \hline
+    \texttt{scripts/build\_index.py}        & Production pipeline script. Ingests raw files, chunks them, generates embeddings with \texttt{all-MiniLM-L6-v2}, and upserts vectors into ChromaDB incrementally using the SHA-256 manifest. \\
+    \hline\hline
+    \multicolumn{2}{|l|}{\textit{Serving layer (\texttt{app/} package, loaded at runtime)}} \\
+    \hline
+    \texttt{app/settings.py}       & Centralised configuration constants: paths, model names, retrieval parameters, and timeouts. \\
+    \hline
+    \texttt{app/rag.py}            & Retrieval, prompt construction, and Ollama integration. Holds the ChromaDB client and embedding model as module-level singletons. \\
+    \hline
+    \texttt{app/ingest.py}         & File loading, chunking, and live embedding for user-uploaded documents. \\
+    \hline
+    \texttt{app/logger.py}         & SQLite-backed logging for chat interactions, sessions, and uploads. \\
+    \hline
+    \texttt{app/main.py}           & FastAPI application entry point. Wires all HTTP endpoints; contains no business logic. \\
+    \hline
+    \texttt{app/static/}           & Single-page HTML/CSS/JS frontend, served as a static file. \\
+    \hline\hline
+    \multicolumn{2}{|l|}{\textit{Development and evaluation (not part of the deployed system)}} \\
+    \hline
+    \texttt{scripts/chat\_cli.py}  & Interactive terminal client for the chat API. \\
+    \hline
+    \texttt{tests/}                & End-to-end pytest suite covering all API endpoints. \\
+    \hline
+    \texttt{notebooks/01--03}      & Exploration notebooks for ingestion, embedding, and RAG pipeline development. Superseded by \texttt{build\_index.py} for production use. \\
+    \hline
+    \texttt{notebooks/04\_evaluation.ipynb} & Evaluation of retrieval and answer quality across four model/RAG configurations. \\
+    \hline\hline
+    \multicolumn{2}{|l|}{\textit{Data directories (not tracked in version control)}} \\
+    \hline
+    \texttt{data/raw/}         & Crawled source documents (HTML; PDFs in \texttt{linked\_pdfs/}; DOCX in \texttt{linked\_docx/}). \\
+    \hline
+    \texttt{data/processed/}   & \texttt{chunks.json}, \texttt{manifest.json}, \texttt{pending\_changes.json}, and the ChromaDB vector store. \\
+    \hline
+    \texttt{data/logs/}        & SQLite chat log database. \\
+    \hline
+    \texttt{data/uploads/}     & User-uploaded documents stored after ingestion. \\
+    \hline
+    \caption{Project directory structure and file responsibilities.}
+    \label{tab:structure}
+\end{longtable}
 
 % ─────────────────────────────────────────────────────────────
 \subsection{Central Configuration}
-\label{sec:impl-overview}
+\label{sec:impl-config}
 
-All tunable parameters are centralised in a single settings module so that they can be changed in one place without touching any business logic.
+All tunable parameters are centralised in \texttt{app/settings.py} so that
+they can be changed in one place without touching any business logic. Every
+other module imports from it; no constants are defined elsewhere.
 
-\lstset{caption={Central configuration (\texttt{app/settings.py})}, label=src:settings}
+\lstset{caption={Central configuration (\texttt{app/settings.py})},
+        label=src:settings}
 \begin{lstlisting}[language=Python]
 from pathlib import Path
 
@@ -119,27 +93,94 @@ CHUNKS_PATH          = str(BASE_DIR / "data/processed/chunks.json")
 MANIFEST_PATH        = str(BASE_DIR / "data/processed/manifest.json")
 PENDING_CHANGES_PATH = str(BASE_DIR / "data/processed/pending_changes.json")
 RAW_DIR              = str(BASE_DIR / "data/raw")
+UPLOAD_DIR           = str(BASE_DIR / "data/uploads")
 COLLECTION_NAME      = "elte_ik"
 EMBEDDING_MODEL      = "all-MiniLM-L6-v2"
-TOP_K                = 3
+TOP_K                = 5
+CHUNK_SIZE           = 800
+CHUNK_OVERLAP        = 150
+MAX_UPLOAD_BYTES     = 20 * 1024 * 1024   # 20 MB
+ALLOWED_UPLOAD_TYPES = {
+    "application/pdf", "text/html",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword", "application/octet-stream",
+}
+ALLOWED_EXTENSIONS   = {".pdf", ".html", ".htm", ".docx"}
 
-OLLAMA_URL      = "http://localhost:11434/api/generate"
-OLLAMA_MODEL    = "llama3.2:3b"
-TEMPERATURE     = 0.1
-TIMEOUT_S       = 120
+OLLAMA_URL   = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
+OLLAMA_MODEL = "llama3.2:3b"
+TEMPERATURE  = 0.1
+TIMEOUT_S    = 120
 \end{lstlisting}
+
+Table~\ref{tab:settings} groups the most commonly adjusted parameters by
+concern.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ | m{0.30\textwidth} | m{0.16\textwidth} | m{0.44\textwidth} | }
+        \hline
+        \textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+        \hline \hline
+        \multicolumn{3}{|l|}{\textit{Retrieval and chunking}} \\
+        \hline
+        \texttt{TOP\_K}        & \texttt{5}   & Chunks retrieved per query. \\
+        \hline
+        \texttt{CHUNK\_SIZE}   & \texttt{800} & Maximum chunk size in characters. \\
+        \hline
+        \texttt{CHUNK\_OVERLAP}& \texttt{150} & Overlap between adjacent chunks in characters. \\
+        \hline
+        \texttt{EMBEDDING\_MODEL} & \texttt{all-MiniLM-L6-v2} & Sentence embedding model. Must be identical between \texttt{build\_index.py} and the serving layer; a mismatch produces incorrect retrieval. \\
+        \hline \hline
+        \multicolumn{3}{|l|}{\textit{Language model}} \\
+        \hline
+        \texttt{OLLAMA\_MODEL} & \texttt{llama3.2:3b} & Default language model passed to Ollama. \\
+        \hline
+        \texttt{TEMPERATURE}   & \texttt{0.1} & LLM sampling temperature. \\
+        \hline
+        \texttt{TIMEOUT\_S}    & \texttt{120} & Per-request timeout for Ollama calls in seconds. \\
+        \hline \hline
+        \multicolumn{3}{|l|}{\textit{Upload validation}} \\
+        \hline
+        \texttt{MAX\_UPLOAD\_BYTES} & \texttt{20~MB} & Maximum accepted file size for user uploads. \\
+        \hline
+        \texttt{ALLOWED\_EXTENSIONS} & \texttt{.pdf .html .docx} & File extensions accepted by the upload endpoint. \\
+        \hline
+    \end{tabular}
+    \caption{Key configuration parameters in \texttt{app/settings.py}.}
+    \label{tab:settings}
+\end{table}
+
+\texttt{OLLAMA\_URL} is the only parameter read from the environment rather
+than hardcoded. Its default value points to \texttt{localhost}, which is
+correct for the manual setup path. The Docker Compose file overrides it with
+\texttt{http://ollama:11434/api/generate} so that the application container
+reaches the Ollama container by service name without any code change. This
+single environment variable is what makes the same image work in both
+deployment modes.
 
 % ─────────────────────────────────────────────────────────────
 \subsection{Data Collection and Ingestion}
 \label{sec:impl-data}
 
-Before any machine learning component can be applied, the raw source material must be collected and converted into a uniform text format. ELTE Faculty of Informatics publishes its relevant information across several channels: static HTML pages, downloadable PDF documents (study regulations, course descriptions, exam rules), and plain-text files. The ingestion pipeline handles all three formats through a unified loader interface.
+ELTE Faculty of Informatics publishes its information across static HTML pages,
+downloadable PDFs, and DOCX documents. The data pipeline collects and converts
+all three formats into a uniform text representation before any machine learning
+component is applied.
 
 \subsubsection{File Loaders}
 
-Each file type requires a different parsing strategy. PDFs are loaded using PyMuPDF (\texttt{pymupdf}), which extracts text page by page with reliable layout handling. HTML files are parsed with \texttt{BeautifulSoup}: structural noise tags (\texttt{script}, \texttt{style}, \texttt{nav}, \texttt{footer}, \texttt{header}, \texttt{aside}) are removed first, then content is extracted from the \texttt{<main>} or \texttt{<article>} element if present, with each paragraph prefixed by its nearest heading to preserve section context. DOCX files are parsed with \texttt{python-docx}, which extracts paragraphs and tables while tracking heading structure. Plain text and Markdown files are read directly. In every case the resulting text goes through a shared cleaning function that collapses runs of blank lines and normalises whitespace.
+Each file type requires a different parsing strategy. PDFs are loaded with
+PyMuPDF page by page. HTML files are parsed with \texttt{BeautifulSoup}:
+structural noise tags (\texttt{script}, \texttt{style}, \texttt{nav},
+\texttt{footer}) are stripped, then each paragraph is prefixed by its nearest
+heading to preserve section context. DOCX files are parsed with
+\texttt{python-docx}, extracting paragraphs and tables while tracking heading
+structure. All formats share a cleaning step that collapses blank lines and
+normalises whitespace.
 
-\lstset{caption={Text cleaning and unified file loader (\texttt{01\_data\_ingestion.ipynb})}, label=src:loader}
+\lstset{caption={Text cleaning and unified file loader
+        (\texttt{scripts/build\_index.py})}, label=src:loader}
 \begin{lstlisting}[language=Python]
 def clean_text(text: str) -> str:
     text = re.sub(r"\n{3,}", "\n\n", text)
@@ -147,33 +188,41 @@ def clean_text(text: str) -> str:
     return text.strip()
 
 def load_file(file_path: str | Path) -> List[Document]:
-    file_path = Path(file_path)
-    suffix = file_path.suffix.lower()
-    if suffix == ".pdf":
-        return load_pdf_pymupdf(file_path)
-    elif suffix in {".txt", ".md"}:
-        return load_txt(file_path)
-    elif suffix in {".html", ".htm"}:
-        return load_html(file_path)
-    elif suffix == ".docx":
-        return load_docx(file_path)
-    else:
-        raise ValueError(f"Unsupported file type: {suffix}")
+    suffix = Path(file_path).suffix.lower()
+    if suffix == ".pdf":          return load_pdf_pymupdf(file_path)
+    elif suffix in {".txt",".md"}: return load_txt(file_path)
+    elif suffix in {".html",".htm"}: return load_html(file_path)
+    elif suffix == ".docx":       return load_docx(file_path)
+    else: raise ValueError(f"Unsupported file type: {suffix}")
 \end{lstlisting}
 
-Every document is represented as a LangChain \texttt{Document} object carrying both its text content and a metadata dictionary that records the original file name, file type, page number (for PDFs), and a \texttt{source\_relative} path used by the incremental update pipeline. This metadata is preserved all the way into the vector database and is later surfaced to the user as source references.
+Every document is represented as a LangChain \texttt{Document} carrying its
+text and a metadata dictionary (file name, file type, page number, and
+\texttt{source\_relative} path). This metadata is preserved into ChromaDB and
+surfaced to the user as source references on every answer.
 
 \subsubsection{Web Crawler}
 
-Raw documents are collected by a standalone crawler (\texttt{scripts/crawler.py}) that performs a resumable breadth-first crawl across two domains. It crawls all English pages under \texttt{inf.elte.hu} recursively, and twenty whitelisted path subtrees on \texttt{www.elte.hu} covering topics such as Neptun registration, visa procedures, student finances, and dormitory housing. Staying within explicit path prefixes on the second domain prevents the crawler from wandering into unrelated university-wide content.
+Raw documents are collected by \texttt{scripts/crawler.py}, which performs a
+resumable breadth-first crawl across two domains: all English pages under
+\texttt{inf.elte.hu} recursively, and twenty whitelisted path subtrees on
+\texttt{www.elte.hu} covering Neptun registration, visa procedures, student
+finances, and dormitory housing. Explicit path prefixes on the second domain
+prevent the crawler from wandering into unrelated university-wide content.
 
-For each HTML page the crawler checks the \texttt{lang} attribute and the URL path to confirm the page is in English before saving it, discarding Hungarian-language variants. Linked PDF and DOCX files discovered on any crawled page are downloaded separately into \texttt{data/raw/linked\_pdfs/} and \texttt{data/raw/linked\_docx/} respectively. A 0.5-second delay between requests limits server load.
-
-The crawler is resumable: if a destination file already exists it is skipped, so an interrupted run can be continued without re-downloading pages that were already saved. A \texttt{--reset} flag wipes \texttt{data/raw/} and \texttt{data/processed/} and starts fresh. The final corpus contains 482 files spanning HTML pages, PDFs, and DOCX documents.
+The crawler confirms each page is English via the \texttt{lang} attribute and
+URL path before saving it. Linked PDFs and DOCX files are downloaded separately
+into \texttt{linked\_pdfs/} and \texttt{linked\_docx/}. A 0.5-second delay
+between requests limits server load. The crawler is resumable — existing files
+are skipped — and a \texttt{--reset} flag starts fresh. The final corpus
+contains 482 files.
 
 \subsubsection*{Breadth-First Search Traversal}
 
-The crawler traverses the web graph using Breadth-First Search (BFS), implemented with a \texttt{deque} as the frontier queue. BFS is the appropriate choice here because it explores pages level by level — the seed URLs are processed first, then pages one hop away, then two hops away, and so on. This guarantees that shallower (and therefore typically more important) pages are crawled before deep or obscure sub-pages, and it bounds memory usage to the width of the graph rather than its depth.
+BFS is implemented with a \texttt{deque} as the frontier queue. It explores
+pages level by level, ensuring shallower and typically more important pages are
+crawled before deep sub-pages, while bounding memory to the width of the graph
+rather than its depth.
 
 \begin{algorithm}[H]
 \caption{BFS Web Crawler}
@@ -189,7 +238,7 @@ The crawler traverses the web graph using Breadth-First Search (BFS), implemente
     \If{$u$ already on disk} parse cached HTML; \textbf{goto} link extraction \EndIf
     \State $\textit{html} \gets \textsc{Fetch}(u)$
     \If{$\textit{html}$ is English} save to \texttt{data/raw/} \EndIf
-    \For{each link $v$ extracted from \textit{html}}
+    \For{each link $v$ extracted from $\textit{html}$}
         \If{$v$ ends in \texttt{.pdf} or \texttt{.docx} \textbf{and} $\textit{allowed}(v)$}
             \State download $v$ to \texttt{linked\_pdfs/} or \texttt{linked\_docx/}
         \ElsIf{$\textit{allowed}(v)$ \textbf{and} $v \notin \textit{visited}$}
@@ -202,9 +251,11 @@ The crawler traverses the web graph using Breadth-First Search (BFS), implemente
 
 \subsubsection{Chunking Strategy}
 
-Large documents cannot be stored or retrieved as single units: a language model has a limited context window, and retrieving a full 50-page PDF in response to a one-sentence question would waste context and degrade answer quality. The documents are therefore split into overlapping chunks using \texttt{RecursiveCharacterTextSplitter} from LangChain.
+A language model has a limited context window, so documents are split into
+overlapping chunks using LangChain's \texttt{RecursiveCharacterTextSplitter}.
 
-\lstset{caption={Chunking configuration (\texttt{01\_data\_ingestion.ipynb})}, label=src:chunking}
+\lstset{caption={Chunking configuration (\texttt{scripts/build\_index.py})},
+        label=src:chunking}
 \begin{lstlisting}[language=Python]
 text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=800,
@@ -214,17 +265,28 @@ text_splitter = RecursiveCharacterTextSplitter(
 )
 \end{lstlisting}
 
-A chunk size of 800 characters was chosen as a practical balance: large enough to contain a complete thought or regulation clause, yet small enough for the embedding model and the LLM to process efficiently. The 150-character overlap ensures that information near a chunk boundary is not silently dropped. If a sentence is split between two chunks, both chunks contain it. The separator list defines a priority order: the splitter tries to break on double newlines first (paragraph boundaries), then single newlines, then sentence ends, and only falls back to splitting mid-word if no other boundary is available.
-
-Chunks shorter than 100 characters (for example lone headers or page numbers) are discarded, and each surviving chunk is assigned a \texttt{chunk\_id} of the form \texttt{<source\_relative>::chunk\_N} before being saved to a JSON file for the next stage.
+800 characters is large enough to contain a complete regulation clause yet
+small enough for the embedding model to encode with high fidelity. The
+150-character overlap ensures that no sentence is silently dropped at a split
+boundary. The separator list defines a priority order — paragraph breaks first,
+then line breaks, then sentence ends — falling back to mid-word splits only as
+a last resort. Chunks shorter than 100 characters are discarded, and each
+surviving chunk is assigned a \texttt{chunk\_id} of the form
+\texttt{<source\_relative>::chunk\_N}.
 
 \subsubsection{Incremental Ingestion with SHA-256 Manifest}
 
-Re-processing all 482 source files from scratch every time a document is updated would be wasteful. The pipeline therefore maintains a \emph{manifest} — a JSON file at \texttt{data/processed/manifest.json} — that records the SHA-256 content hash, chunk count, and last-processed timestamp for every file that has been ingested.
+Re-processing all 482 source files from scratch on every run would be wasteful.
+\texttt{build\_index.py} therefore maintains a manifest at
+\texttt{data/processed/manifest.json} recording the SHA-256 content hash,
+chunk count, and timestamp for every ingested file.
 
-On each run, notebook \texttt{01\_data\_ingestion.ipynb} computes the SHA-256 hash of every file currently on disk and compares it against the manifest. This produces three change sets: new files (present on disk but not in the manifest), updated files (hash has changed), and deleted files (in the manifest but no longer on disk). Only new and updated files are re-chunked; unchanged files are skipped entirely.
+On each run the script computes the hash of every file on disk and compares it
+against the manifest, producing three change sets: new, updated, and deleted
+files. Only new and updated files are re-chunked.
 
-\lstset{caption={Incremental diff logic (\texttt{01\_data\_ingestion.ipynb})}, label=src:manifest}
+\lstset{caption={Incremental diff logic (\texttt{scripts/build\_index.py})},
+        label=src:manifest}
 \begin{lstlisting}[language=Python]
 new_files     = sorted(disk_paths - manifest_paths)
 deleted_files = sorted(manifest_paths - disk_paths)
@@ -234,19 +296,29 @@ updated_files = sorted(
 )
 \end{lstlisting}
 
-After chunking, the results of the diff are saved to \texttt{data/processed/pending\_changes.json}. Notebook \texttt{02\_embedding.ipynb} reads this file to know exactly which chunk IDs to remove from ChromaDB and which new embeddings to insert, avoiding a full re-embed of the collection. Once notebook 02 completes it deletes the pending changes file so that the next run starts clean.
-
+The diff results are written to \texttt{pending\_changes.json}. In Phase~2 of
+the same run, the embedding step reads this file to determine exactly which
+chunk IDs to delete from ChromaDB and which new vectors to insert, avoiding a
+full re-embed of the collection. Once complete, \texttt{pending\_changes.json}
+is deleted so the next run starts clean.
 % ─────────────────────────────────────────────────────────────
 \subsection{Embedding and Vector Storage}
 \label{sec:impl-embedding}
 
-With the text broken into chunks, the next step is to convert each chunk into a dense numeric vector (an \emph{embedding}) that captures its semantic meaning. Chunks with similar meaning will have embeddings that are close to each other in vector space, which allows the retrieval step to find relevant content even when the user's phrasing differs from the exact wording in the source document.
+Each text chunk is converted into a numeric vector — an
+\emph{embedding} — that captures its semantic meaning. Chunks with similar
+meaning produce similar vectors, allowing the retrieval step to find relevant
+content even when the user's phrasing differs from the exact wording in the
+source document.
 
 \subsubsection{Embedding Model}
 
-The chosen model is \texttt{all-MiniLM-L6-v2}, a compact sentence transformer from the Sentence-Transformers library that produces 384-dimensional vectors.
+The chosen model is \texttt{all-MiniLM-L6-v2}, a compact sentence transformer
+that produces 384-dimensional vectors and runs efficiently on CPU.
+\texttt{build\_index.py} encodes all chunks in a single batched call:
 
-\lstset{caption={Embedding pipeline class (\texttt{02\_embedding.ipynb})}, label=src:embedding}
+\lstset{caption={Embedding pipeline (\texttt{scripts/build\_index.py})},
+        label=src:embedding}
 \begin{lstlisting}[language=Python]
 class EmbeddingPipeline:
     def __init__(self, model_name: str = EMBEDDING_MODEL):
@@ -256,20 +328,26 @@ class EmbeddingPipeline:
         return self.model.encode(texts, show_progress_bar=True)
 \end{lstlisting}
 
-All chunk texts are encoded in a single batched call, producing a matrix of shape \texttt{(num\_chunks, 384)}. The same model instance is reused at query time inside the production application to ensure that document and query embeddings live in the same vector space.
+The same model is loaded as a singleton in the serving layer so that document
+and query embeddings always live in the same vector space. A mismatch between
+the model used at index time and at query time produces silently incorrect
+retrieval results.
 
 \subsubsection{ChromaDB Vector Store}
 
-The embeddings, original texts, and metadata are stored in ChromaDB, an open-source vector database that persists data to disk and supports fast approximate nearest-neighbour search. A single persistent collection named \texttt{elte\_ik} is created with cosine similarity as the distance metric, which is standard for sentence embeddings.
+The embeddings, texts, and metadata are stored in ChromaDB, a lightweight
+vector database that persists to disk and requires no separate server process.
+A single collection named \texttt{elte\_ik} is created with cosine similarity
+as the distance metric.
 
-\lstset{caption={Upserting embeddings into ChromaDB (\texttt{02\_embedding.ipynb})}, label=src:chroma}
+\lstset{caption={Collection creation and upsert
+        (\texttt{scripts/build\_index.py})}, label=src:chroma}
 \begin{lstlisting}[language=Python]
 client = chromadb.PersistentClient(path=CHROMA_PATH)
 collection = client.get_or_create_collection(
     name=COLLECTION_NAME,
     metadata={"hnsw:space": "cosine"}
 )
-
 collection.upsert(
     ids=[str(c["metadata"]["chunk_id"]) for c in chunks],
     embeddings=embeddings.tolist(),
@@ -278,34 +356,56 @@ collection.upsert(
 )
 \end{lstlisting}
 
-Using \texttt{upsert} rather than \texttt{add} means that re-running the embedding notebook after new documents have been scraped will update existing chunks in place rather than creating duplicates. The collection is stored under \texttt{data/processed/chroma\_db/} and is read at runtime by the production RAG module without any re-processing.
+\texttt{upsert} rather than \texttt{add} ensures that re-running
+\texttt{build\_index.py} after new documents have been crawled updates
+existing chunks in place rather than creating duplicates.
+
+\subsubsection*{Cosine Similarity}
+
+For a query embedding $\mathbf{q}$ and a chunk embedding $\mathbf{d}$, cosine
+similarity is defined as:
+
+\begin{equation}
+\text{sim}(\mathbf{q}, \mathbf{d}) =
+    \frac{\mathbf{q} \cdot \mathbf{d}}{\|\mathbf{q}\|\,\|\mathbf{d}\|}
+\label{eq:cosine}
+\end{equation}
+
+The result lies in $[-1, 1]$, where 1 means maximally similar and 0 means
+unrelated. It is preferred over Euclidean distance for sentence embeddings
+because it is invariant to vector magnitude — two chunks expressing the same
+concept in different amounts of text score similarly, whereas Euclidean
+distance would penalise the longer chunk for having a larger-norm embedding.
+
+\subsubsection*{HNSW Index}
+
+ChromaDB indexes the stored vectors using the Hierarchical Navigable Small
+World (HNSW) graph~\cite{malkov2018hnsw}, which performs approximate
+nearest-neighbour search in sub-linear time. HNSW builds a multi-layer
+proximity graph and navigates it greedily from a random entry point,
+converging on the nearest neighbours without examining every element. At
+6128 stored chunks the brute-force alternative would also be fast enough, but
+HNSW ensures the system remains performant as the collection grows.
 
 % ─────────────────────────────────────────────────────────────
 \subsection{Retrieval-Augmented Generation Pipeline}
 \label{sec:impl-rag}
 
 The RAG pipeline is the core intelligence of the system. It consists of three steps that run on every incoming user query: retrieval, prompt construction, and LLM generation.
+All three are implemented in
+\texttt{app/rag.py}.
 
 \subsubsection{Retrieval}
 
-When a user submits a question, the embedding model encodes it into a 384-dimensional query vector. ChromaDB then returns the \texttt{TOP\_K} (default: 3) chunks whose stored embeddings are most similar to the query vector under cosine similarity.
+The ChromaDB client, collection, and embedding model are initialised as
+module-level singletons at import time, so they are loaded from disk once
+when the FastAPI process starts and reused across all requests. Both
+\texttt{SentenceTransformer} and ChromaDB's \texttt{PersistentClient} are
+safe for concurrent read access, so no locking is required under
+uvicorn's default threaded worker.
 
-\subsubsection*{Cosine Similarity}
-
-Cosine similarity measures the angle between two vectors rather than their Euclidean distance. For a query embedding $\mathbf{q}$ and a chunk embedding $\mathbf{d}$, it is defined as:
-
-\begin{equation}
-\text{sim}(\mathbf{q}, \mathbf{d}) = \frac{\mathbf{q} \cdot \mathbf{d}}{\|\mathbf{q}\|\,\|\mathbf{d}\|}
-\label{eq:cosine}
-\end{equation}
-
-The result lies in $[-1, 1]$; a value of 1 means the vectors point in exactly the same direction (maximally similar), and 0 means they are orthogonal (unrelated). Cosine similarity is preferred over Euclidean distance for sentence embeddings because it is invariant to the magnitude of the vectors — two chunks that express the same concept but with different amounts of text will score similarly, whereas Euclidean distance would penalise the longer chunk simply for having a larger-norm embedding.
-
-\subsubsection*{HNSW Index}
-
-Comparing the query vector against all 6112 stored embeddings by brute force on every request would be acceptable at this scale, but ChromaDB instead uses the Hierarchical Navigable Small World (HNSW) graph index~\cite{malkov2018hnsw} to perform approximate nearest-neighbour search in sub-linear time. HNSW builds a multi-layer proximity graph over the stored vectors and navigates it greedily from a random entry point, converging on the nearest neighbours without examining every element. The result is a small, configurable approximation error in exchange for a large reduction in search latency as the collection grows.
-
-\lstset{caption={Retrieval function (\texttt{app/rag.py})}, label=src:retrieve}
+\lstset{caption={Singletons and retrieval function (\texttt{app/rag.py})},
+        label=src:retrieve}
 \begin{lstlisting}[language=Python]
 _client     = chromadb.PersistentClient(path=CHROMA_PATH)
 _collection = _client.get_collection(name=COLLECTION_NAME)
@@ -324,11 +424,15 @@ def retrieve(query: str, n_results: int = TOP_K) -> list[dict]:
     ]
 \end{lstlisting}
 
-The ChromaDB client and the SentenceTransformer model are initialised eagerly at module import time as module-level singletons. This means the model is loaded from disk once when the FastAPI process starts, and every subsequent request reuses the already-loaded objects, keeping per-query latency low.
+When a query arrives, the embedding model encodes it into a 384-dimensional
+vector and ChromaDB returns the \texttt{TOP\_K} (default: 5) chunks with the
+highest cosine similarity to that vector.
 
 \subsubsection{Prompt Construction}
 
-The retrieved chunks are assembled into a structured prompt that instructs the LLM to answer only from the provided context and to admit when the answer is not available. Each chunk is labelled with its source file name so the model can associate claims with documents.
+The retrieved chunks are assembled into a structured prompt that instructs
+the LLM to answer strictly from the provided context and to acknowledge when
+the answer is absent. Each chunk is labelled with its source file name.
 
 \lstset{caption={Prompt template (\texttt{app/rag.py})}, label=src:prompt}
 \begin{lstlisting}[language=Python]
@@ -346,23 +450,24 @@ def build_prompt(query: str, chunks: list[dict]) -> str:
     )
 \end{lstlisting}
 
-The explicit instruction \emph{``If the answer is not in the context, say so''} is important for a faculty assistant: it is better to acknowledge a gap in the indexed documents than to hallucinate a regulation or deadline.
+The instruction \emph{``If the answer is not in the context, say so''} is
+critical for a faculty assistant: acknowledging a gap in the indexed documents
+is always preferable to hallucinating a regulation or deadline.
 
-\subsubsection{Local LLM via Ollama}
+\subsubsection{LLM Generation via Ollama}
 
-Answers are generated by a locally running language model served through Ollama. The default model is \texttt{llama3.2:3b} (3 billion parameters), but the system supports runtime model switching: the frontend exposes a model selector that queries the \texttt{GET /models} endpoint for the list of models currently available in the local Ollama installation, and the selected model name is passed with each chat request. During evaluation an additional model, \texttt{gemma3:4b}, was also tested. Ollama exposes a simple HTTP API, meaning the production code does not depend on any cloud service or API key. The model runs on the same machine as the application, which preserves user privacy and eliminates per-query costs.
+Answers are generated by a locally running model served through Ollama's HTTP
+API. The default model is \texttt{llama3.2:3b}, but the system supports
+runtime model switching — the selected model name is passed with each request
+and forwarded to \texttt{call\_ollama}.
 
 \lstset{caption={Ollama invocation (\texttt{app/rag.py})}, label=src:ollama}
 \begin{lstlisting}[language=Python]
 def call_ollama(prompt: str, model: str = OLLAMA_MODEL) -> str:
     if not check_ollama():
-        raise RuntimeError(
-            "Ollama is not running. Start it with: ollama serve"
-        )
+        raise RuntimeError("Ollama is not running.")
     payload = {
-        "model": model,
-        "prompt": prompt,
-        "stream": False,
+        "model": model, "prompt": prompt, "stream": False,
         "options": {"temperature": TEMPERATURE, "num_ctx": 2048},
     }
     try:
@@ -370,46 +475,44 @@ def call_ollama(prompt: str, model: str = OLLAMA_MODEL) -> str:
         r.raise_for_status()
         return r.json()["response"].strip()
     except requests.exceptions.Timeout:
-        raise RuntimeError(
-            f"Ollama timed out after {TIMEOUT_S}s"
-        )
+        raise RuntimeError(f"Ollama timed out after {TIMEOUT_S}s")
     except requests.exceptions.HTTPError as e:
         raise RuntimeError(
             f"Ollama HTTP {e.response.status_code} -- "
             f"is model '{model}' pulled?"
         )
     except KeyError:
-        raise RuntimeError(
-            f"Unexpected Ollama response: {r.text[:200]}"
-        )
+        raise RuntimeError(f"Unexpected Ollama response: {r.text[:200]}")
 \end{lstlisting}
 
-The context window is set to 2048 tokens, which comfortably fits three retrieved chunks plus the prompt template and leaves room for the generated answer. A \texttt{check\_ollama()} health probe is called before every generation request. The \texttt{try}/\texttt{except} block distinguishes three failure modes: a timeout (model still loading), an HTTP error code (model not pulled), and a malformed response body — each producing a descriptive \texttt{RuntimeError} that the API layer converts into a 503 response.
+The context window is fixed at 2048 tokens, which fits five retrieved chunks
+plus the prompt template with room for the generated answer. The
+\texttt{try}/\texttt{except} block distinguishes three failure modes — timeout
+(model still loading), HTTP error (model not pulled), and malformed response
+body — each producing a descriptive \texttt{RuntimeError} that the API layer
+converts into an HTTP~503.
 
 \subsubsection{End-to-End Query Function}
 
-The three steps are composed into a single \texttt{rag\_query} function that is called by the API layer:
+The three steps are composed into \texttt{rag\_query}, the single entry point
+called by the API layer:
 
-\lstset{caption={End-to-end RAG query (\texttt{app/rag.py})}, label=src:ragquery}
+\lstset{caption={End-to-end RAG query (\texttt{app/rag.py})},
+        label=src:ragquery}
 \begin{lstlisting}[language=Python]
-def rag_query(query: str) -> dict:
-    chunks  = retrieve(query)
-    prompt  = build_prompt(query, chunks)
-    answer  = call_ollama(prompt)
+def rag_query(query: str, model: str = OLLAMA_MODEL) -> dict:
+    chunks = retrieve(query)
+    prompt = build_prompt(query, chunks)
+    answer = call_ollama(prompt, model=model)
     return {
         "answer": answer,
         "sources": [
-            {
-                "chunk_id": c["metadata"]["chunk_id"],
-                "file": c["metadata"]["file_name"],
-            }
+            {"chunk_id": c["metadata"]["chunk_id"],
+             "file":     c["metadata"]["file_name"]}
             for c in chunks
         ],
     }
 \end{lstlisting}
-
-The function returns both the answer text and a list of source references. This allows the frontend to display which documents were used, giving the user a way to verify the answer or read further.
-
 % ─────────────────────────────────────────────────────────────
 \subsection{FastAPI Backend}
 \label{sec:impl-backend}
@@ -515,52 +618,4 @@ When the user sends a message, the frontend posts a JSON request to \texttt{/cha
 A status indicator in the header reflects the current Ollama availability by polling the \texttt{/health} endpoint on page load. This gives the user immediate feedback if the local model is not running before they attempt their first query.
 
 % ─────────────────────────────────────────────────────────────
-\subsection{Project Structure}
-\label{sec:impl-structure}
 
-The repository is organised into clearly separated concerns, as summarised in Table~\ref{tab:structure}.
-
-\begin{table}[H]
-    \centering
-    \begin{tabular}{|l|p{0.60\textwidth}|}
-        \hline
-        \textbf{Path} & \textbf{Purpose} \\
-        \hline \hline
-        \texttt{scripts/crawler.py}    & Resumable BFS web crawler for both ELTE domains. \\
-        \hline
-        \texttt{scripts/chat\_cli.py}  & Interactive terminal client for the chat API. \\
-        \hline
-        \texttt{app/main.py}           & FastAPI application and all HTTP endpoints. \\
-        \hline
-        \texttt{app/rag.py}            & Retrieval, prompt building, and Ollama integration. \\
-        \hline
-        \texttt{app/ingest.py}         & File loading, chunking, and live embedding for user-uploaded documents. \\
-        \hline
-        \texttt{app/logger.py}         & SQLite-backed chat and upload logging. \\
-        \hline
-        \texttt{app/settings.py}       & Centralised configuration constants. \\
-        \hline
-        \texttt{app/static/}           & Single-page HTML/CSS/JS frontend. \\
-        \hline
-        \texttt{tests/}                & End-to-end pytest suite covering all API endpoints. \\
-        \hline
-        \texttt{notebooks/01\_data\_ingestion.ipynb} & Document loading, chunking, and manifest update. \\
-        \hline
-        \texttt{notebooks/02\_embedding.ipynb}       & Incremental embedding generation and ChromaDB update. \\
-        \hline
-        \texttt{notebooks/03\_RAG\_pipeline.ipynb}   & Interactive exploration of the full RAG pipeline. \\
-        \hline
-        \texttt{notebooks/04\_evaluation.ipynb}      & Evaluation of retrieval and answer quality across four configurations. \\
-        \hline
-        \texttt{data/raw/}         & Source documents (HTML; PDFs in \texttt{linked\_pdfs/}; DOCX in \texttt{linked\_docx/}). \\
-        \hline
-        \texttt{data/processed/}   & \texttt{chunks.json}, \texttt{manifest.json}, and ChromaDB vector store. \\
-        \hline
-        \texttt{data/logs/}        & SQLite chat log database. \\
-        \hline
-        \texttt{data/uploads/}     & User-uploaded documents stored after ingestion. \\
-        \hline
-    \end{tabular}
-    \caption{Project directory structure and file responsibilities.}
-    \label{tab:structure}
-\end{table}
