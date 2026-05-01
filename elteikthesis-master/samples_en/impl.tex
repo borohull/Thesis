@@ -2,9 +2,40 @@
 \section{Implementation}
 \label{sec:impl}
 
-This section describes the full implementation of the ELTE IK Assistant across its four layers: data collection and ingestion, document embedding and vector storage, the RAG backend, and the web-based frontend. Each subsection covers one layer in detail, including the key design choices, data structures, and code.
+The implementation follows two phases. The data pipeline --- collection,
+processing, and embedding --- runs once offline to build the knowledge base.
+The online serving layer --- retrieval, answer generation, and the HTTP API
+--- runs on every user query. The subsections below follow this order,
+starting with project structure and configuration before covering each
+phase in turn.
 
 % ─────────────────────────────────────────────────────────────
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|m{0.35\textwidth}|m{0.55\textwidth}|}
+        \hline
+        \textbf{Component} & \textbf{Specification} \\
+        \hline\hline
+        System     & Acer Aspire A715-75G \\
+        \hline
+        CPU        & Intel Core i5-10300H (8 CPUs, 2.5~GHz) \\
+        \hline
+        RAM        & 8~GB DDR4 \\
+        \hline
+        GPU        & NVIDIA GeForce GTX 1650 (Integrated) \\
+        \hline
+        OS         & Windows 11 Enterprise 64-bit (Build 26200) \\
+        \hline
+        Python     & 3.14.3 \\
+        \hline
+    \end{tabular}
+    \caption{Development and test machine specifications.}
+    \label{tab:dev-machine}
+\end{table}
+
+% ─────────────────────────────────────────────────────────────
+
 \subsection{Project Structure}
 \label{sec:impl-structure}
 
@@ -118,7 +149,7 @@ concern.
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{ | m{0.30\textwidth} | m{0.16\textwidth} | m{0.44\textwidth} | }
+    \begin{tabular}{ | m{0.26\textwidth} | m{0.22\textwidth} | m{0.42\textwidth} | }
         \hline
         \textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
         \hline \hline
@@ -276,10 +307,17 @@ surviving chunk is assigned a \texttt{chunk\_id} of the form
 
 \subsubsection{Incremental Ingestion with SHA-256 Manifest}
 
-Re-processing all 482 source files from scratch on every run would be wasteful.
-\texttt{build\_index.py} therefore maintains a manifest at
-\texttt{data/processed/manifest.json} recording the SHA-256 content hash,
-chunk count, and timestamp for every ingested file.
+Re-processing all 482 source files from scratch on every run would be
+wasteful. \texttt{build\_index.py} therefore maintains a manifest at
+\texttt{data/processed/manifest.json} recording a content hash, chunk
+count, and timestamp for every ingested file.
+
+The hash function used is SHA-256, which maps any file's binary content to
+a fixed 256-bit fingerprint. Any change to even a single byte produces a
+completely different fingerprint, making it a reliable change detector.
+SHA-256 was chosen over simpler alternatives such as file size or
+modification timestamp because it is robust to files that are re-downloaded
+with the same timestamp but different content.
 
 On each run the script computes the hash of every file on disk and compares it
 against the manifest, producing three change sets: new, updated, and deleted
@@ -513,109 +551,290 @@ def rag_query(query: str, model: str = OLLAMA_MODEL) -> dict:
         ],
     }
 \end{lstlisting}
+
+The function returns both the answer and a list of source references, allowing
+the frontend to display which documents were used and giving the user a way to
+verify or follow up directly.
+
 % ─────────────────────────────────────────────────────────────
 \subsection{FastAPI Backend}
 \label{sec:impl-backend}
 
-The backend is a FastAPI application (\texttt{app/main.py}) that exposes three HTTP endpoints and serves the static frontend files.
+The backend is a FastAPI application (\texttt{app/main.py}) that wires all
+HTTP endpoints to the \texttt{rag}, \texttt{ingest}, and \texttt{logger}
+modules and serves the static frontend. It contains no business logic of its
+own.
 
 \begin{table}[H]
     \centering
-    \begin{tabular}{|l|l|p{0.45\textwidth}|}
+    \begin{tabular}{|l|l|p{0.42\textwidth}|}
         \hline
         \textbf{Method} & \textbf{Path} & \textbf{Description} \\
         \hline \hline
-        GET    & \texttt{/}                              & Serves the single-page chat interface (\texttt{index.html}). \\
+        GET    & \texttt{/health}
+               & Returns application status and whether Ollama is reachable. \\
         \hline
-        GET    & \texttt{/health}                        & Returns application status and whether Ollama is reachable. \\
+        GET    & \texttt{/models}
+               & Returns the list of models available in the local Ollama
+                 installation. \\
         \hline
-        GET    & \texttt{/models}                        & Returns the list of models currently available in the local Ollama installation. \\
+        GET    & \texttt{/info}
+               & Returns the active model, embedding model, total chunk count,
+                 and list of user-uploaded documents. \\
         \hline
-        POST   & \texttt{/chat}                          & Accepts a user message and optional \texttt{session\_id} and \texttt{model}, runs the RAG pipeline, and returns the answer with source references. \\
+        POST   & \texttt{/chat}
+               & Accepts a message, optional \texttt{session\_id} and
+                 \texttt{model}, runs the RAG pipeline, logs the interaction,
+                 and returns the answer with source references. \\
         \hline
-        GET    & \texttt{/sessions}                      & Returns the list of past chat sessions ordered by most recently updated. \\
+        GET    & \texttt{/sessions}
+               & Returns all past sessions ordered by most recently updated. \\
         \hline
-        GET    & \texttt{/sessions/\{id\}/messages}      & Returns all messages in a specific session in chronological order. \\
+        GET    & \texttt{/sessions/\{id\}/messages}
+               & Returns all messages in a session in chronological order. \\
         \hline
-        DELETE & \texttt{/sessions/\{id\}}               & Deletes a session and all its associated messages from the log. \\
+        DELETE & \texttt{/sessions/\{id\}}
+               & Deletes a session and all its associated messages. \\
         \hline
-        POST   & \texttt{/upload}                        & Accepts a user-uploaded file, chunks and embeds it, and adds it to the live ChromaDB collection. \\
+        POST   & \texttt{/upload}
+               & Validates, chunks, embeds, and indexes a user-uploaded file
+                 into the live ChromaDB collection. \\
+        \hline
+        GET    & \texttt{/source/\{filename\}}
+               & Serves the original source file from \texttt{data/raw/} or
+                 \texttt{data/uploads/} for direct inspection. \\
         \hline
     \end{tabular}
     \caption{API endpoints exposed by the FastAPI backend.}
     \label{tab:endpoints}
 \end{table}
 
-The \texttt{/chat} endpoint wraps \texttt{rag\_query} with error handling.
+\subsubsection{Chat Endpoint}
 
-\lstset{caption={Chat endpoint (\texttt{app/main.py})}, label=src:chat-endpoint}
+The \texttt{/chat} endpoint is the primary entry point for all user queries.
+It delegates to \texttt{rag\_query}, logs the result, and updates the session
+record.
+
+\lstset{caption={Chat endpoint (\texttt{app/main.py})},
+        label=src:chat-endpoint}
 \begin{lstlisting}[language=Python]
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
+    start = time.time()
     try:
-        result = rag_query(req.message)
+        result = rag_query(req.message, model=req.model or OLLAMA_MODEL)
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail=str(e))
-    return result
+
+    response_ms = int((time.time() - start) * 1000)
+
+    if req.session_id:
+        log_chat(
+            user_message=req.message,
+            answer=result["answer"],
+            sources=result["sources"],
+            response_ms=response_ms,
+            session_id=req.session_id,
+        )
+        upsert_session(req.session_id, req.message)
+
+    return {**result, "response_ms": response_ms}
 \end{lstlisting}
 
-If \texttt{rag\_query} raises a \texttt{RuntimeError} (for example because Ollama is not running or timed out), the endpoint converts it into an HTTP 503 response so the frontend can display a meaningful error rather than a timeout spinner. CORS middleware is enabled to allow the frontend to communicate with the backend. For a locally deployed application this is straightforward, but in a production web deployment the allowed origins would need to be restricted to a specific domain.
+The model name is forwarded from the request, falling back to
+\texttt{OLLAMA\_MODEL} if absent — this is how the frontend's model selector
+takes effect without requiring a server restart. If \texttt{rag\_query} raises
+a \texttt{RuntimeError} (Ollama not running, timed out, or model not pulled),
+the endpoint converts it into an HTTP~503. Logging and session update only
+occur when a \texttt{session\_id} is provided; requests from scripts or other
+API clients that omit it are answered without being persisted.
+
+\subsubsection{Upload Endpoint}
+
+The \texttt{/upload} endpoint extends the knowledge base at runtime without
+requiring a pipeline re-run or server restart.
+
+\lstset{caption={Upload endpoint (\texttt{app/main.py})},
+        label=src:upload-endpoint}
+\begin{lstlisting}[language=Python]
+@app.post("/upload", response_model=UploadResponse)
+def upload_file(file: UploadFile = File(...)):
+    ext = Path(file.filename).suffix.lower()
+    if file.content_type not in ALLOWED_UPLOAD_TYPES \
+            or ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=415, detail="Unsupported file type.")
+
+    content = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large.")
+
+    sha256 = hashlib.sha256(content).hexdigest()
+    if ingest.is_already_indexed(sha256):
+        return UploadResponse(status="already_indexed", ...)
+
+    dest = Path(UPLOAD_DIR) / f"{sha256[:12]}_{safe_name}"
+    dest.write_bytes(content)
+    report = ingest.ingest_file(dest)
+    log_upload(file_name=safe_name, sha256=sha256,
+               size_bytes=len(content), chunk_count=report.chunk_count,
+               status="indexed")
+    return UploadResponse(status="indexed", ...)
+\end{lstlisting}
+
+The endpoint processes each upload in five stages:
+\begin{enumerate}
+    \item \textbf{Type validation} — the declared content type and file
+          extension are checked against the allowed lists in
+          \texttt{settings.py}; only PDF, HTML, and DOCX are accepted.
+    \item \textbf{Size check} — the file is read into memory and rejected
+          if it exceeds \texttt{MAX\_UPLOAD\_BYTES} (20~MB).
+    \item \textbf{Deduplication} — a SHA-256 digest is computed and checked
+          against the manifest; if the file is already indexed the endpoint
+          returns immediately without re-processing.
+    \item \textbf{Ingestion} — the file is written to \texttt{data/uploads/}
+          and passed to \texttt{ingest.ingest\_file()}, which applies the
+          same loaders, chunking, and embedding logic as the data pipeline
+          and upserts the vectors directly into the running ChromaDB
+          collection.
+    \item \textbf{Audit log} — the upload is recorded in the
+          \texttt{uploads} table with its digest, size, and chunk count.
+\end{enumerate}
+The document is immediately available for retrieval with no server restart
+required.
+
+CORS middleware is enabled globally so that the frontend, served as a static
+file by the same FastAPI process, can communicate with the API without
+browser origin restrictions.
 
 % ─────────────────────────────────────────────────────────────
 \subsection{Logging System}
 \label{sec:impl-logging}
 
-Every chat interaction is recorded in a SQLite database at \texttt{data/logs/chat\_logs.db}. The schema captures the timestamp, the user's message, the generated answer, the source references (as a JSON array), the response time in milliseconds, and any error message.
+Every interaction is recorded in a SQLite database at
+\texttt{data/logs/chat\_logs.db}. The schema consists of three tables.
 
-\lstset{caption={Database schema initialisation (\texttt{app/logger.py})}, label=src:schema}
-\begin{lstlisting}[language=Python]
-con.execute("""
-    CREATE TABLE IF NOT EXISTS chat_logs (
-        id            INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp     TEXT    NOT NULL,
-        user_message  TEXT    NOT NULL,
-        answer        TEXT    NOT NULL,
-        sources       TEXT    NOT NULL,  -- JSON array
-        response_ms   INTEGER NOT NULL,
-        error         TEXT    DEFAULT NULL,
-        session_id    TEXT    DEFAULT NULL
-    )
-""")
-con.execute("""
-    CREATE TABLE IF NOT EXISTS sessions (
-        session_id  TEXT PRIMARY KEY,
-        title       TEXT NOT NULL,
-        created_at  TEXT NOT NULL,
-        updated_at  TEXT NOT NULL
-    )
-""")
-con.execute("""
-    CREATE TABLE IF NOT EXISTS uploads (
-        id          INTEGER PRIMARY KEY AUTOINCREMENT,
-        timestamp   TEXT    NOT NULL,
-        file_name   TEXT    NOT NULL,
-        sha256      TEXT    NOT NULL,
-        size_bytes  INTEGER NOT NULL,
-        chunk_count INTEGER NOT NULL,
-        status      TEXT    NOT NULL
-    )
-""")
-\end{lstlisting}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    table/.style={
+        rectangle, draw, rounded corners=4pt,
+        font=\small\ttfamily,
+        text width=5.2cm,
+        inner sep=0pt
+    },
+    header/.style={
+        fill=gray!20, font=\small\bfseries\ttfamily,
+        minimum height=0.7cm, text centered,
+        rounded corners=4pt
+    }
+]
 
-The \texttt{chat\_logs} table links each message to a \texttt{session\_id}, enabling per-session history retrieval. The \texttt{sessions} table stores one row per conversation — its title (the first 60 characters of the opening message) and timestamps — so the sidebar can list sessions without scanning the full message log. The \texttt{uploads} table records every user-uploaded file alongside its SHA-256 digest and the number of chunks produced, providing an audit trail for the live document ingestion feature.
+\node[table] (sessions) at (0,0) {%
+    \begin{tabular}{@{}ll@{}}
+        \multicolumn{2}{c}{\cellcolor{gray!20}\textbf{sessions}} \\
+        \hline
+        session\_id & TEXT (PK) \\
+        title       & TEXT \\
+        created\_at & TEXT \\
+        updated\_at & TEXT \\
+    \end{tabular}
+};
 
+\node[table] (chatlogs) at (7.5,0) {%
+    \begin{tabular}{@{}ll@{}}
+        \multicolumn{2}{c}{\cellcolor{gray!20}\textbf{chat\_logs}} \\
+        \hline
+        id           & INTEGER (PK) \\
+        session\_id  & TEXT (FK) \\
+        timestamp    & TEXT \\
+        user\_message & TEXT \\
+        answer       & TEXT \\
+        sources      & TEXT \\
+        response\_ms & INTEGER \\
+        error        & TEXT \\
+    \end{tabular}
+};
+
+\node[table] (uploads) at (3.75,-5.5) {%
+    \begin{tabular}{@{}ll@{}}
+        \multicolumn{2}{c}{\cellcolor{gray!20}\textbf{uploads}} \\
+        \hline
+        id          & INTEGER (PK) \\
+        timestamp   & TEXT \\
+        file\_name  & TEXT \\
+        sha256      & TEXT \\
+        size\_bytes & INTEGER \\
+        chunk\_count & INTEGER \\
+        status      & TEXT \\
+    \end{tabular}
+};
+
+\draw[->, >=latex, thick]
+    (sessions.east) -- node[above, font=\small]{1} 
+    node[below, font=\small]{0..*} (chatlogs.west);
+
+\end{tikzpicture}
+\caption{Entity-relationship diagram for the SQLite logging database.}
+\label{fig:er-diagram}
+\end{figure}
+
+The \texttt{chat\_logs} table links each message to a \texttt{session\_id},
+enabling per-session history retrieval. The \texttt{sessions} table stores
+one row per conversation with a human-readable title derived from the opening
+message, so the sidebar can list sessions without scanning the full message
+log. The \texttt{uploads} table provides an audit trail for the live document
+ingestion feature, recording each file's digest and chunk count alongside its
+ingestion status.
 
 % ─────────────────────────────────────────────────────────────
 \subsection{Frontend}
 \label{sec:impl-frontend}
 
-The user interface is a single-page HTML application served as a static file by FastAPI. It uses vanilla JavaScript without any framework dependency, which keeps the bundle small and removes the need for a separate build step.
+The user interface is a single-page HTML application served as a static file
+by FastAPI. Vanilla JavaScript with no framework dependency eliminates a build
+step and all Node.js tooling — deployment is a single file copy.
 
-The visual design follows the ELTE colour palette: navy blue (\texttt{\#012850}) for the header, teal (\texttt{\#009FA3}) for interactive elements, and light grey for the chat background. The layout consists of a fixed header bar, a scrollable message area, and a pinned input row at the bottom.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{images/UI.png}
+    \caption{The ELTE IK Assistant web interface.}
+    \label{fig:ui-impl}
+\end{figure}
 
-When the user sends a message, the frontend posts a JSON request to \texttt{/chat} and appends a typing indicator to the message area while waiting for the response. On success, both the answer text and the source file names are displayed in the assistant's reply bubble. On failure (HTTP 503), an error message is shown inline without leaving the page.
+\subsubsection*{Layout and visual design}
 
-A status indicator in the header reflects the current Ollama availability by polling the \texttt{/health} endpoint on page load. This gives the user immediate feedback if the local model is not running before they attempt their first query.
+A fixed header bar, scrollable message area, and pinned input row at the
+bottom. The header follows the ELTE colour palette — navy blue
+(\texttt{\#012850}) for structure, teal (\texttt{\#009FA3}) for interactive
+elements — and shows an Ollama status indicator that polls \texttt{/health}
+on page load.
 
-% ─────────────────────────────────────────────────────────────
+\subsubsection*{Session management}
+
+A UUID is generated with \texttt{crypto.randomUUID()} on page load and sent
+with every \texttt{/chat} request. Past sessions are listed in the left
+sidebar, loaded from \texttt{GET /sessions}; clicking one replays its history
+from \texttt{GET /sessions/\{id\}/messages}. \texttt{New chat} generates a
+fresh UUID and clears the display.
+
+\subsubsection*{Message flow}
+
+On submit, a typing indicator is appended while \texttt{POST /chat} is in
+flight. On success it is replaced by the answer bubble, which includes a
+collapsible source list — each filename links to \texttt{GET
+/source/\{filename\}} so the user can open the original document. On HTTP~503
+an inline error replaces the indicator.
+
+\subsubsection*{Model selection}
+
+\texttt{GET /models} populates a dropdown on page load. The selected model is
+stored in a module-level variable and included in every \texttt{/chat}
+request. Switching takes effect immediately.
+
+\subsubsection*{Document upload}
+
+A hidden \texttt{<input type="file">} filtered to PDF, HTML, and DOCX posts
+to \texttt{POST /upload} as \texttt{multipart/form-data}. The response
+\texttt{chunk\_count} is shown as confirmation, or \texttt{already\_indexed}
+if the file is a duplicate.
 
