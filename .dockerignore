@@ -2,7 +2,6 @@ data/raw/
 data/logs/
 data/uploads/
 notebooks/
-scripts/
 elteikthesis-master/
 tests/
 .claude/

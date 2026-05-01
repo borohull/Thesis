@@ -27,6 +27,7 @@ def build_prompt(query: str, chunks: list[dict]) -> str:
         for c in chunks
     )
     return f"""You are a helpful assistant for ELTE Faculty of Informatics students. Answer the question using only the context below. If the answer is not in the context, say so.
+    and state: "I can only answer questions related to the ELTE Faculty of Informatics curriculum, regulations, and procedures".
 
 Context:
 {context}

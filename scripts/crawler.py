@@ -22,14 +22,14 @@ from urllib.parse import urljoin, urlparse, urlunparse, unquote
 import httpx
 from bs4 import BeautifulSoup
 
-# ── Directories ───────────────────────────────────────────────────────────────
-ROOT_DIR = Path(__file__).parent
+# Directories 
+ROOT_DIR = Path(__file__).parent.parent
 RAW_DIR  = ROOT_DIR / "data" / "raw"
 PROC_DIR = ROOT_DIR / "data" / "processed"
 PDF_DIR  = RAW_DIR / "linked_pdfs"
 DOCX_DIR = RAW_DIR / "linked_docx"
 
-# ── Crawl configuration ───────────────────────────────────────────────────────
+# Crawl configuration
 DELAY          = 0.5   # seconds between requests
 REQUEST_TIMEOUT = 20.0  # seconds
 
@@ -38,7 +38,7 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9,hu;q=0.8",
 }
 
-# ── Seeds ─────────────────────────────────────────────────────────────────────
+# Seeds 
 INF_SEEDS = ["https://inf.elte.hu/en"]
 INF_HOSTS = {"inf.elte.hu", "www.inf.elte.hu"}
 
@@ -69,8 +69,7 @@ ELTE_SEEDS = [
 ELTE_PREFIXES = [urlparse(s).path for s in ELTE_SEEDS]
 
 
-# ── URL utilities ─────────────────────────────────────────────────────────────
-
+# URL utilities
 def normalize_url(url: str) -> str:
     """Lowercase scheme+host, strip fragment and query, normalize trailing slash."""
     p = urlparse(url)
@@ -142,8 +141,7 @@ def docx_url_to_filename(url: str) -> str:
     return name
 
 
-# ── Language detection ────────────────────────────────────────────────────────
-
+# Language detection
 def is_english(html: str, url: str) -> bool:
     """
     Return True if the page is English.
@@ -174,8 +172,7 @@ def is_english(html: str, url: str) -> bool:
     return False
 
 
-# ── Fetch helpers ─────────────────────────────────────────────────────────────
-
+# Fetch helpers
 def fetch_html(client: httpx.Client, url: str, dest: Path) -> tuple[str | None, str | None]:
     """
     Fetch a URL and save its HTML to dest.
@@ -238,7 +235,7 @@ def fetch_docx(client: httpx.Client, url: str) -> None:
         print(f"  [DOCX-FAIL] {url}  ({e})")
 
 
-# ── Link extraction ───────────────────────────────────────────────────────────
+# Link extraction 
 
 def extract_links(html: str, base_url: str) -> list[str]:
     """Return all absolute href links found in html, normalized."""
@@ -253,8 +250,7 @@ def extract_links(html: str, base_url: str) -> list[str]:
     return links
 
 
-# ── Main crawl loop ───────────────────────────────────────────────────────────
-
+# Main crawl loop
 def crawl(client: httpx.Client) -> None:
     """BFS crawl of all seeds. Single loop handles both inf.elte.hu and elte.hu."""
     RAW_DIR.mkdir(parents=True, exist_ok=True)
@@ -285,7 +281,7 @@ def crawl(client: httpx.Client) -> None:
                 print(f"  [SKIP-LANG] {url}")
                 dest.unlink()
                 continue
-            print(f"  [SKIP] {url}")
+            print(f"  [SKIP] {url}  (queue: {len(queue)} remaining)")
             skipped += 1
         else:
             time.sleep(DELAY)
@@ -323,8 +319,7 @@ def crawl(client: httpx.Client) -> None:
     )
 
 
-# ── Reset ─────────────────────────────────────────────────────────────────────
-
+# Reset
 def reset_data() -> None:
     """Wipe data/raw/ and data/processed/ entirely."""
     for d in (RAW_DIR, PROC_DIR):
@@ -338,8 +333,7 @@ def reset_data() -> None:
     print("[RESET] Directories recreated.")
 
 
-# ── Entry point ───────────────────────────────────────────────────────────────
-
+# Entry point
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Crawl ELTE IK and whitelisted ELTE pages for the RAG pipeline."

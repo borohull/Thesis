@@ -3,85 +3,236 @@
 \label{ch:user}
 
 This chapter describes how to set up and use the ELTE IK Assistant.
-Two setup paths are provided: a Docker-based zero-configuration path (recommended)
-and a manual path for users who prefer to manage dependencies directly.
+Two setup paths are provided: a Docker-based path and a manual path.
+Choose based on your situation --- Docker is better for isolated or shared
+deployments, the manual path is simpler for a single machine.
+
+% ─────────────────────────────────────────────────────────────────────────────
+\section{System Requirements}
+\label{sec:user-requirements}
+
+Table~\ref{tab:user-sysreq} lists the minimum system requirements for running
+the ELTE IK Assistant.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ | m{0.28\textwidth} | m{0.62\textwidth} | }
+        \hline
+        \textbf{Component} & \textbf{Requirement} \\
+        \hline \hline
+        Operating system & Windows 10/11, macOS 12+, or Ubuntu 22.04+ \\
+        \hline
+        RAM & 8~GB minimum (16~GB recommended) \\
+        \hline
+        Disk space & $\approx$6~GB (models + vector store + crawled data) \\
+        \hline
+        Internet access & Required during first-run setup only \\
+        \hline
+    \end{tabular}
+    \caption{Minimum system requirements.}
+    \label{tab:user-sysreq}
+\end{table}
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Installation and Configuration}
 \label{sec:user-install}
 
-\subsection*{Option A — Docker (recommended)}
+\subsection*{Option A --- Docker}
 
-Docker Compose orchestrates all services automatically: the Ollama language model
-server, the model download, and the FastAPI application.
+Docker Compose orchestrates all services automatically: the Ollama language
+model server, both model downloads, the knowledge base build, and the FastAPI
+application. This option is best suited for isolated or shared deployments.
+
+\textbf{First-run note:} on the first \texttt{docker compose up}, the container
+crawls ELTE documents and builds the vector index before starting the server.
+This takes approximately 5--10 minutes depending on internet speed and hardware.
+Subsequent starts are immediate.
 
 \begin{enumerate}
-    \item Install \textbf{Docker Desktop} (includes Docker Compose) from the official
-          Docker website for your operating system.
+    \item Install \textbf{Docker Desktop} (includes Docker Compose) from
+          the official Docker website for your operating system.
 
     \item Clone or download the project repository:
 \begin{lstlisting}[language=bash]
-git clone https://github.com/borohull/elte_chat.git
-cd elte_chat
+git clone https://github.com/borohull/Thesis.git
+cd Thesis/elte_chat
 \end{lstlisting}
 
-    \item Start all services with a single command:
+    \item Start all services:
 \begin{lstlisting}[language=bash]
 docker compose up -d
 \end{lstlisting}
 
-    Docker will build the application image, start the Ollama service, and
-    automatically pull the \texttt{llama3.2:3b} model on first run.
-    This step requires an internet connection and may take several minutes
-    depending on download speed.
+    \item Monitor first-run progress:
+\begin{lstlisting}[language=bash]
+docker compose logs -f app
+\end{lstlisting}
+          Wait until \texttt{Application startup complete} appears in the logs.
 
-    \item Once all containers are healthy, open the chat interface at
+    \item Open the chat interface at
           \texttt{http://localhost:8000/static/index.html}.
 
-    \item To stop and remove the containers:
+    \item To stop the containers:
 \begin{lstlisting}[language=bash]
 docker compose down
 \end{lstlisting}
 \end{enumerate}
 
-\subsection*{Option B — Manual Setup}
+\subsection*{Option B --- Manual Setup}
 
-For a manual installation without Docker, follow the step-by-step instructions
-in Section~\ref{subsec:impl-setup} of the Developer Documentation.
+This option is best suited for running the assistant on a single local machine.
+Steps 1--4 are performed \textbf{once} by whoever sets up the system.
+End users only need step 5 (opening the browser).
+
+\textbf{Prerequisite:} Python 3.10 or newer must be installed on your system.
+
+\begin{enumerate}
+    \item Install \textbf{Ollama} from \url{https://ollama.com/download}, then
+          start the service and pull both language models:
+\begin{lstlisting}[language=bash]
+ollama serve
+ollama pull llama3.2:3b
+ollama pull gemma3:4b
+\end{lstlisting}
+
+    \item Clone or download the project repository:
+\begin{lstlisting}[language=bash]
+git clone https://github.com/borohull/Thesis.git
+cd Thesis/elte_chat
+\end{lstlisting}
+
+    \item Run the setup script. This creates a virtual environment, installs
+          dependencies, crawls ELTE documents, and builds the vector index.
+
+          \textbf{macOS / Linux:}
+\begin{lstlisting}[language=bash]
+chmod +x setup.sh
+./setup.sh
+\end{lstlisting}
+
+          \textbf{Windows:}
+\begin{lstlisting}[language=bash]
+setup.bat
+\end{lstlisting}
+
+          The script prints progress at each stage. A complete first run takes
+          approximately 5--10~minutes. Listing~\ref{lst:setup-output} shows the
+          expected terminal output.
+
+\lstset{caption={Expected terminal output during first-run setup.},
+        label=lst:setup-output}
+\begin{lstlisting}
+=== ELTE IK Assistant Setup ===
+[1/6] Starting Ollama service...
+[2/6] Pulling language models (this may take several minutes)...
+pulling manifest
+pulling dde5aa3fc5ff: 100% 2.0 GB
+...
+success
+pulling manifest
+pulling aeda25e63ebd: 100% 3.3 GB
+...
+success
+[3/6] Setting up Python environment...
+[4/6] Crawling ELTE documents (this will take several minutes)...
+  [SAVE] https://inf.elte.hu/en  ->  index.html
+  [SAVE] https://inf.elte.hu/en/courses  ->  courses.html
+  [PDF-SAVE] https://inf.elte.hu/...  ->  regulations.pdf
+  [SAVE] https://www.elte.hu/en/quaestura-office  ->  quaestura-office.html
+  ...
+Crawl complete -- saved: 482, skipped: 0, failed: 5, PDFs: 754, DOCXs: 46
+[5/6] Building knowledge base (chunking + embedding)...
+=== build_index.py: ELTE IK knowledge base builder ===
+--- Phase 1: Ingestion ---
+Scan: 482 files on disk, 0 in manifest
+  new:       482
+  updated:   0
+  deleted:   0
+  unchanged: 0
+--- Phase 2: Embedding ---
+Loaded 6128 chunks
+Batches: 100% 192/192
+Upserted 6128 chunks into 'elte_ik'
+Collection now has 6128 documents
+=== Done. Knowledge base is up to date. ===
+[6/6] Setup complete.
+
+To start the server:
+  source .venv/bin/activate && uvicorn app.main:app  (macOS/Linux)
+  .venv\Scripts\activate && uvicorn app.main:app     (Windows)
+
+Then open: http://localhost:8000/static/index.html
+\end{lstlisting}
+
+          On subsequent runs the crawler skips already-downloaded files and the
+          embedding step skips unchanged chunks, so re-running setup is fast
+          and safe.
+
+    \item Start the server:
+\begin{lstlisting}[language=bash]
+# macOS / Linux
+source .venv/bin/activate && uvicorn app.main:app
+
+# Windows
+.venv\Scripts\activate && uvicorn app.main:app
+\end{lstlisting}
+
+    \item Open the chat interface at
+          \texttt{http://localhost:8000/static/index.html}.
+\end{enumerate}
+
+To verify the server is running correctly, run:
+
+\begin{lstlisting}[language=bash]
+curl http://localhost:8000/health
+\end{lstlisting}
+
+A successful response is \texttt{\{"status": "ok", "ollama": true\}}. If
+\texttt{"ollama": false} appears, Ollama is not running or the selected model
+has not been pulled.
 
 \subsection*{Configuration}
 
 All tunable parameters are defined in \texttt{app/settings.py}.
 The most commonly adjusted values are listed in Table~\ref{tab:user-settings}.
 
-\begin{table}[h]
-\centering
-\begin{tabular}{lll}
-\hline
-\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
-\hline
-\texttt{OLLAMA\_MODEL}    & \texttt{llama3.2:3b}      & Language model served by Ollama \\
-\texttt{EMBEDDING\_MODEL} & \texttt{all-MiniLM-L6-v2} & Sentence embedding model \\
-\texttt{TOP\_K}           & \texttt{3}                & Chunks retrieved per query \\
-\texttt{TEMPERATURE}      & \texttt{0.1}              & Generation temperature \\
-\texttt{CHROMA\_PATH}     & \texttt{data/processed/chroma\_db} & Vector store location \\
-\hline
-\end{tabular}
-\caption{Key configuration parameters in \texttt{app/settings.py}}
-\label{tab:user-settings}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ | m{0.3\textwidth} | m{0.2\textwidth} | m{0.4\textwidth} | }
+        \hline
+        \textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+        \hline \hline
+        \texttt{OLLAMA\_MODEL}    & \texttt{llama3.2:3b}       & Language model served by Ollama \\
+        \hline
+        \texttt{EMBEDDING\_MODEL} & \texttt{all-MiniLM-L6-v2}  & Sentence embedding model \\
+        \hline
+        \texttt{TOP\_K}           & \texttt{3}                 & Chunks retrieved per query \\
+        \hline
+        \texttt{TEMPERATURE}      & \texttt{0.1}               & LLM sampling temperature \\
+        \hline
+        \texttt{CHROMA\_PATH}     & \texttt{data/processed/chroma\_db} & Vector store location on disk \\
+        \hline
+    \end{tabular}
+    \caption{Key configuration parameters in \texttt{app/settings.py}.}
+    \label{tab:user-settings}
 \end{table}
 
 Changing \texttt{OLLAMA\_MODEL} takes effect on the next server start.
 Changing \texttt{EMBEDDING\_MODEL} additionally requires rebuilding the vector
-store by re-running notebook \texttt{02\_embedding.ipynb}.
+store by re-running \texttt{python scripts/build\_index.py}.
+
+\textbf{Note:} these settings are relevant only for whoever deploys the system,
+not for end users asking questions through the interface.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Using the Web Interface}
 \label{sec:user-web}
 
-Open \texttt{http://localhost:8000/static/index.html} in any modern browser once
-the server is running. The interface consists of a left sidebar listing chat
-sessions, a central chat panel, and a right sidebar for model selection.
+Open \texttt{http://localhost:8000/static/index.html} in any modern browser
+once the server is running. The interface consists of a left sidebar listing
+chat sessions, a central chat panel, and a right sidebar for model selection.
+A status indicator in the header shows whether Ollama is reachable --- if it
+shows as unavailable, start or restart Ollama before sending a query.
 
 \begin{figure}[H]
     \centering
@@ -92,80 +243,103 @@ sessions, a central chat panel, and a right sidebar for model selection.
 
 \paragraph{Asking a question.}
 Type a question in the input field at the bottom of the chat panel and press
-\textbf{Enter} or click the send button. The assistant retrieves relevant document
-chunks, constructs a grounded prompt, and returns an answer with source references.
-Questions should relate to the ELTE Faculty of Informatics.
+\textbf{Enter} or click the send button. The assistant retrieves relevant
+document chunks, constructs a grounded prompt, and returns an answer along
+with the source file names it used. Questions should relate to the ELTE Faculty
+of Informatics --- curriculum, regulations, procedures, and student services.
+On a CPU-only machine with 8~GB of RAM, typical response times are
+30--80~seconds per query. The first query after startup may be slower while the
+model loads into memory.
+
+\paragraph{Source references.}
+Every answer displays the names of the source documents used to construct it
+(for example \texttt{elte\_ik\_regulations.html} or \texttt{TAJ.pdf}). These
+are the actual files retrieved from the knowledge base. If an answer looks
+incorrect or incomplete, the source names indicate which documents to check
+directly.
 
 \paragraph{Selecting a language model.}
-The right sidebar lists all Ollama models available on the machine. Click a model
-name to switch for the current session. On a CPU-only machine with 8~GB of RAM,
-typical response times are 30--80~seconds per query.
+The right sidebar lists all Ollama models available on the machine. Click a
+model name to switch for the current session. \texttt{llama3.2:3b} is the
+default and works on most hardware. \texttt{gemma3:4b} is also available and
+may produce different quality results.
 
 \paragraph{Managing chat sessions.}
-Each conversation is stored as a named session. Sessions appear in the left sidebar
-and persist across browser refreshes. Click \textbf{New chat} to start a new
-conversation, or hover over an existing session and click the \texttimes\ button
-to delete it.
+Each conversation is stored as a named session. Sessions appear in the left
+sidebar and persist across browser refreshes and server restarts. Click
+\textbf{New chat} to start a new conversation, or hover over an existing
+session and click the \texttimes\ button to delete it.
 
 \paragraph{Uploading custom documents.}
-Users can extend the knowledge base with their own PDF, HTML, or DOCX files.
-Click \textbf{Upload document} above the input field, select a file (maximum
-20~MB), and wait for the confirmation message. Uploaded documents are chunked,
-embedded, and available for retrieval immediately without restarting the server.
+The knowledge base can be extended with your own files. Click
+\textbf{Upload document} above the input field, select a PDF, HTML, or DOCX
+file (maximum 20~MB), and wait for the confirmation message. The document is
+chunked, embedded, and available for retrieval immediately --- no server
+restart required.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Using the Command-Line Client}
 \label{sec:user-cli}
 
-A lightweight CLI client is provided for scripting and testing without a browser.
-The FastAPI server must be running before starting the client:
+A lightweight CLI client is available for scripting and testing without a
+browser. The FastAPI server must be running before starting the client:
 
 \begin{lstlisting}[language=bash]
 python scripts/chat_cli.py
 \end{lstlisting}
 
-Type a question at the \texttt{You:} prompt and press Enter. The client sends the
-question to the server and prints the answer. Type \texttt{exit} or press
-\texttt{Ctrl+C} to quit.
+Type a question at the \texttt{You:} prompt and press Enter. The client sends
+the question to the server and prints the answer and source references.
+Type \texttt{exit} or press \texttt{Ctrl+C} to quit.
 
 % ─────────────────────────────────────────────────────────────────────────────
 \section{Example Queries}
 \label{sec:user-examples}
 
-The following examples illustrate the range of questions the system handles.
+The following examples illustrate the range of questions the system handles and
+how it responds to out-of-scope input.
 
-\paragraph{Example 1 — Prerequisite query.}
-\textit{Question:} ``What is a strong prerequisite and how does it differ from a weak one?''
+\paragraph{Example 1 --- Prerequisite query.}
+\textit{Question:} ``What is a strong prerequisite and how does it differ from
+a weak one?''
 
-\textit{Answer:} A strong prerequisite must be passed before a student may register
-for the follow-up course. A weak prerequisite allows registration before the
-prerequisite is passed, though it is still required for graduation.
+\textit{Answer:} According to the context, a strong prerequisite is a 
+prerequisite without which the follow-up subject cannot be taken in the next semester, and the follow-up subject 
+can only be registered for after the prerequisite subject has been fulfilled. It must be completed before taking the follow-up subject. 
+A strong prerequisite differs from a weak one in that it has no special annotation 
+(as opposed to being marked as 'weak') and is considered essential for taking the follow-up subject in the next semester.
 
-\textit{Sources:} \texttt{The\_prerequisites.pdf}
+\textit{Sources:} \texttt{prerequisites.html}
 
-\paragraph{Example 2 — Exam rules.}
-\textit{Question:} ``How many times can I retake a failed exam in one semester?''
+\paragraph{Example 2 --- Exam rules.}
+\textit{Question:} ``How many times can I retake a failed exam in one
+semester?''
 
-\textit{Answer:} A student may attempt an exam up to three times per exam period.
-If all three attempts are failed, the course must be re-registered in a subsequent
-semester.
+\textit{Answer:} According to Section 79 (6) of the ELTE Academic Regulations, you can retake and 
+improve your grade in no more than two exams per semester.
 
-\textit{Sources:} \texttt{elte\_ik\_regulations.html}
+\textit{Sources:} \texttt{ELTE Academic Regulations.pdf}
 
-\paragraph{Example 3 — Registration procedure.}
-\textit{Question:} ``When does course registration open for the spring semester?''
+\paragraph{Example 3 --- Ranking when registering for a subject.}
+\textit{Question:} ``How do I see my ranking when registering for a subject?''
 
-\textit{Answer:} Course registration for the spring semester typically opens in the
-last week of January through the Neptun system. Exact dates are published each year
-in the faculty academic calendar.
+\textit{Answer:} To see your ranking when registering for a subject, follow these steps: 1. 
+Find the subject you want to register for. 2. Click the arrow icon at the end of the corresponding row. 
+3. Then click "Details" to view your score and your position in the ranking. 
+This will show you your ranking sequence and lucky point (ranking score 1 and 2, respectively)
 
-\textit{Sources:} \texttt{academic\_calendar.html}
+\textit{Sources:} \texttt{registration for subjects BSc\_MSc (1).pdf}
 
-\paragraph{Example 4 — Out-of-scope query.}
+\paragraph{Example 4 --- Out-of-scope query.}
 \textit{Question:} ``What is the capital city of Australia?''
 
-\textit{Answer:} The information needed to answer this question is not available in
-the documents I have access to. I can only answer questions related to the ELTE
-Faculty of Informatics curriculum, regulations, and procedures.
+\textit{Answer:} The information needed to answer this question is not
+available in the documents I have access to. I can only answer questions
+related to the ELTE Faculty of Informatics curriculum, regulations, and
+procedures.
 
 \textit{Sources:} (none)
+
+The fourth example demonstrates the system's refusal behaviour: when no
+relevant chunks are retrieved, the assistant explicitly acknowledges the gap
+rather than generating an unsupported answer.
